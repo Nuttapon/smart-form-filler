@@ -177,11 +177,11 @@
     .select-all {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 16px 20px;
+      gap: 10px;
+      padding: 10px 20px;
       background: rgba(255, 255, 255, 0.4);
       border-bottom: 1px solid rgba(210, 180, 140, 0.1);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       color: var(--text-muted);
     }
@@ -371,16 +371,16 @@
 
     .btn {
       flex: 1;
-      padding: 16px;
+      padding: 12px;
       border: none;
-      border-radius: 18px;
-      font-size: 14px;
+      border-radius: 14px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -485,10 +485,9 @@
 <body>
   <div class="header">
     <div class="header-left">
-      <div class="header-icon">✨</div>
+      <div class="header-icon">🐈</div>
       <div>
         <h1>Smart Filler</h1>
-        <p>Warm Glass Design</p>
       </div>
     </div>
     <div class="locale-toggle">
@@ -504,11 +503,6 @@
     </div>
 
     <div id="main" style="display: none;">
-      <div class="status">
-        <span class="status-icon">🕊️</span>
-        <span class="status-text">Found <span id="fieldCount" class="status-count">0</span> form fields</span>
-      </div>
-
       <div id="emptyState" class="empty-state" style="display: none;">
         <div class="empty-state-icon">☁️</div>
         <p>No compatible fields found.<br>Try navigating to a form page.</p>
@@ -524,10 +518,10 @@
 
       <div id="buttonsWrapper" class="buttons" style="display: none;">
         <button id="randomBtn" class="btn btn-secondary">
-          🎲 Randomize
+          Randomize
         </button>
         <button id="fillBtn" class="btn btn-primary">
-          ✨ Fill Form
+          Fill Form
         </button>
       </div>
     </div>
