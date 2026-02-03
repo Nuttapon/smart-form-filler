@@ -434,7 +434,7 @@ async function scanPage() {
     }
   });
   
-  return results[0].result || [];
+  return (results && results[0] && results[0].result) ? results[0].result : [];
 }
 
 function detectFieldType(searchText, inputType) {
@@ -535,6 +535,7 @@ async function fillForm(fields) {
 
 function renderFields(fields) {
   const fieldsList = document.getElementById('fieldsList');
+  if (!fieldsList) return;
   fieldsList.innerHTML = '';
   
   fields.forEach((field, idx) => {
@@ -547,6 +548,9 @@ function renderFields(fields) {
     
     const div = document.createElement('div');
     div.className = 'field-item';
+    // Add staggered animation delay
+    div.style.animationDelay = `${idx * 0.05}s`;
+    
     div.innerHTML = `
       <input type="checkbox" class="field-checkbox" data-idx="${idx}" ${field.enabled ? 'checked' : ''}>
       <div class="field-info">
@@ -554,7 +558,7 @@ function renderFields(fields) {
           ${displayName}
           <span class="field-type">${field.detectedType}</span>
         </div>
-        <div class="field-value">${field.generatedValue}</div>
+        <div class="field-value" data-idx="${idx}" title="Click to copy">${field.generatedValue}</div>
         <select class="field-type-select" data-idx="${idx}">
           ${optionsHtml}
         </select>
@@ -577,10 +581,55 @@ function renderFields(fields) {
   fieldsList.querySelectorAll('.field-type-select').forEach(select => {
     select.addEventListener('change', (e) => {
       const idx = parseInt(e.target.dataset.idx);
-      detectedFields[idx].generatorOverride = e.target.value;
-      // Regenerate just this field
-      detectedFields = generateValues(detectedFields);
+      const newType = e.target.value;
+      
+      // Update the field override
+      detectedFields[idx].generatorOverride = newType;
+      
+      // Partial refresh: Only regenerate this specific field
+      const field = detectedFields[idx];
+      const searchText = `${field.name} ${field.id} ${field.placeholder} ${field.labelText}`;
+      
+      let detectedType;
+      if (newType !== 'auto') {
+        const option = generatorOptions.find(o => o.value === newType);
+        detectedType = { generator: newType, label: option?.label || newType };
+      } else {
+        detectedType = detectFieldType(searchText, field.type);
+      }
+      
+      // Update internal state for this field
+      const generatorFn = generators[detectedType.generator] || generators.text;
+      detectedFields[idx].generatedValue = generatorFn();
+      detectedFields[idx].detectedType = detectedType.label;
+      detectedFields[idx].generatorType = detectedType.generator;
+      
+      // Re-render to show new value
       renderFields(detectedFields);
+      showToast(`Updated ${detectedType.label}`, '🔄');
+    });
+  });
+
+  // Add click-to-copy listeners for field value
+  fieldsList.querySelectorAll('.field-value').forEach(div => {
+    div.addEventListener('click', async (e) => {
+      const idx = parseInt(e.currentTarget.dataset.idx);
+      const value = detectedFields[idx].generatedValue;
+      
+      try {
+        await navigator.clipboard.writeText(value);
+        showToast('Copied to clipboard!', '📋');
+        
+        // Visual feedback
+        const el = e.currentTarget;
+        const originalColor = el.style.color;
+        el.style.color = '#10b981'; // Green feedback
+        setTimeout(() => {
+          if (el) el.style.color = originalColor;
+        }, 800);
+      } catch (err) {
+        console.error('Failed to copy: ', err);
+      }
     });
   });
 }
@@ -601,11 +650,16 @@ function updateLocaleUI() {
   document.getElementById(`locale${currentLocale.toUpperCase()}`).classList.add('active');
 }
 
-function showToast(message) {
+function showToast(message, icon = '✨') {
   const toast = document.getElementById('toast');
-  document.getElementById('toastMessage').textContent = message;
+  const toastMsg = document.getElementById('toastMessage');
+  const toastIcon = document.getElementById('toastIcon');
+  
+  if (toastMsg) toastMsg.textContent = message;
+  if (toastIcon) toastIcon.textContent = icon;
+  
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2000);
+  setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
 // ===== Initialize =====
@@ -622,26 +676,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fields = await scanPage();
     
     // Generate values
-    detectedFields = generateValues(fields);
+    detectedFields = generateValues(fields || []);
     
     // Update UI
-    loading.style.display = 'none';
-    main.style.display = 'block';
-    fieldCount.textContent = detectedFields.length;
+    if (loading) loading.style.display = 'none';
+    if (main) main.style.display = 'block';
+    if (fieldCount) fieldCount.textContent = (detectedFields || []).length;
     
-    if (detectedFields.length === 0) {
-      emptyState.style.display = 'block';
+    if (!detectedFields || detectedFields.length === 0) {
+      if (emptyState) emptyState.style.display = 'block';
     } else {
-      fieldsWrapper.style.display = 'block';
-      buttonsWrapper.style.display = 'flex';
+      if (fieldsWrapper) fieldsWrapper.style.display = 'block';
+      if (buttonsWrapper) buttonsWrapper.style.display = 'flex';
       renderFields(detectedFields);
     }
   } catch (err) {
     console.error(err);
-    loading.style.display = 'none';
-    main.style.display = 'block';
-    emptyState.style.display = 'block';
-    emptyState.querySelector('p').textContent = 'Error: ' + err.message;
+    if (loading) loading.style.display = 'none';
+    if (main) main.style.display = 'block';
+    if (emptyState) {
+      emptyState.style.display = 'block';
+      const p = emptyState.querySelector('p');
+      if (p) p.textContent = 'Error: ' + err.message;
+    }
   }
   
   // Locale toggle handlers
@@ -650,7 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateLocaleUI();
     detectedFields = generateValues(detectedFields);
     renderFields(detectedFields);
-    showToast('🇺🇸 Switched to English');
+    showToast('Switched to English', '🇺🇸');
   });
   
   document.getElementById('localeTH').addEventListener('click', () => {
@@ -658,7 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateLocaleUI();
     detectedFields = generateValues(detectedFields);
     renderFields(detectedFields);
-    showToast('🇹🇭 Switched to Thai');
+    showToast('Switched to Thai', '🇹🇭');
   });
   
   // Select all handler
@@ -674,13 +731,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       generatedValue: undefined
     })));
     renderFields(detectedFields);
-    showToast('🎲 Values randomized!');
+    showToast('Values randomized!', '🎲');
   });
   
   // Fill button
   document.getElementById('fillBtn').addEventListener('click', async () => {
     await fillForm(detectedFields);
     const filledCount = detectedFields.filter(f => f.enabled).length;
-    showToast(`✅ Filled ${filledCount} fields!`);
+    showToast(`${filledCount} fields filled!`, '✨');
   });
 });
