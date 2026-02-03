@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,35 +13,75 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      width: 380px;
+      width: 400px;
       min-height: 200px;
-      max-height: 500px;
+      max-height: 550px;
       overflow-y: auto;
-      background: #f8fafc;
-      color: #1e293b;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+      color: #e2e8f0;
     }
 
     .header {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
       color: white;
-      padding: 16px;
+      padding: 16px 20px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .header-icon {
-      font-size: 24px;
+      font-size: 28px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
     }
 
     .header h1 {
       font-size: 16px;
       font-weight: 600;
+      letter-spacing: -0.3px;
     }
 
     .header p {
       font-size: 11px;
       opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    .locale-toggle {
+      display: flex;
+      gap: 4px;
+      background: rgba(255,255,255,0.15);
+      padding: 4px;
+      border-radius: 8px;
+    }
+
+    .locale-btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      background: transparent;
+      color: white;
+      opacity: 0.7;
+      transition: all 0.2s;
+    }
+
+    .locale-btn:hover {
+      opacity: 1;
+    }
+
+    .locale-btn.active {
+      background: rgba(255,255,255,0.25);
+      opacity: 1;
+      font-weight: 600;
     }
 
     .content {
@@ -51,42 +91,58 @@
     .status {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px;
-      background: white;
-      border-radius: 8px;
+      gap: 10px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
       margin-bottom: 12px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
     }
 
     .status-icon {
-      font-size: 18px;
+      font-size: 20px;
     }
 
     .status-text {
       font-size: 13px;
-      color: #64748b;
+      color: #94a3b8;
     }
 
     .status-count {
-      font-weight: 600;
-      color: #6366f1;
+      font-weight: 700;
+      color: #a78bfa;
+      font-size: 15px;
     }
 
     .fields-container {
-      background: white;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-      max-height: 280px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      max-height: 300px;
       overflow-y: auto;
+    }
+
+    .fields-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .fields-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .fields-container::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
     }
 
     .field-item {
       display: flex;
-      align-items: center;
-      padding: 10px 12px;
-      border-bottom: 1px solid #f1f5f9;
-      gap: 10px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      gap: 12px;
+      transition: background 0.2s;
     }
 
     .field-item:last-child {
@@ -94,14 +150,16 @@
     }
 
     .field-item:hover {
-      background: #f8fafc;
+      background: rgba(255,255,255,0.03);
     }
 
     .field-checkbox {
-      width: 16px;
-      height: 16px;
-      accent-color: #6366f1;
+      width: 18px;
+      height: 18px;
+      accent-color: #8b5cf6;
       cursor: pointer;
+      margin-top: 2px;
+      border-radius: 4px;
     }
 
     .field-info {
@@ -112,48 +170,81 @@
     .field-name {
       font-size: 12px;
       font-weight: 500;
-      color: #334155;
+      color: #e2e8f0;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .field-type {
       font-size: 9px;
-      background: #e2e8f0;
-      color: #64748b;
-      padding: 2px 6px;
-      border-radius: 4px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
     }
 
     .field-value {
       font-size: 11px;
-      color: #6366f1;
-      margin-top: 3px;
+      color: #a78bfa;
+      margin-top: 4px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      font-family: 'Monaco', 'Menlo', monospace;
+      background: rgba(167, 139, 250, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(167, 139, 250, 0.2);
+    }
+
+    .field-type-select {
+      margin-top: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+      color: #e2e8f0;
+      font-size: 10px;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    .field-type-select:hover {
+      border-color: #8b5cf6;
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .field-type-select:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
     }
 
     .buttons {
       display: flex;
-      gap: 8px;
-      margin-top: 12px;
+      gap: 10px;
+      margin-top: 14px;
     }
 
     .btn {
       flex: 1;
-      padding: 12px 16px;
+      padding: 14px 18px;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 8px;
       transition: all 0.2s;
+      letter-spacing: -0.2px;
     }
 
     .btn:disabled {
@@ -162,50 +253,62 @@
     }
 
     .btn-secondary {
-      background: white;
-      color: #64748b;
-      border: 1px solid #e2e8f0;
+      background: rgba(255,255,255,0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.15);
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background: #f8fafc;
-      border-color: #cbd5e1;
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.25);
+      transform: translateY(-1px);
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
       color: white;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
     }
 
     .btn-primary:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
     }
 
     .empty-state {
       text-align: center;
-      padding: 40px 20px;
-      color: #94a3b8;
+      padding: 50px 24px;
+      color: #64748b;
     }
 
     .empty-state-icon {
-      font-size: 40px;
-      margin-bottom: 12px;
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
     }
 
     .empty-state p {
-      font-size: 13px;
+      font-size: 14px;
+      line-height: 1.5;
     }
 
     .select-all {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: #f1f5f9;
-      border-bottom: 1px solid #e2e8f0;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
       font-size: 12px;
-      color: #64748b;
+      color: #94a3b8;
+    }
+
+    .select-all label {
+      cursor: pointer;
     }
 
     .toast {
@@ -213,17 +316,19 @@
       bottom: 16px;
       left: 16px;
       right: 16px;
-      background: #10b981;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
+      padding: 14px 18px;
+      border-radius: 10px;
       font-size: 13px;
+      font-weight: 500;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       transform: translateY(100px);
       opacity: 0;
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
     }
 
     .toast.show {
@@ -233,64 +338,93 @@
 
     .loading {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px;
+      padding: 50px;
+      gap: 16px;
     }
 
     .spinner {
-      width: 24px;
-      height: 24px;
-      border: 3px solid #e2e8f0;
-      border-top-color: #6366f1;
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #8b5cf6;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      color: #94a3b8;
+      font-size: 12px;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* Validation badge styles */
+    .validated {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      color: #10b981;
+      margin-left: 4px;
+    }
+
+    .validated::before {
+      content: '✓';
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <span class="header-icon">🔧</span>
-    <div>
-      <h1>Smart Form Filler</h1>
-      <p>Auto-detect & fill form fields</p>
+    <div class="header-left">
+      <span class="header-icon">⚡</span>
+      <div>
+        <h1>Smart Form Filler</h1>
+        <p>Auto-fill with validated test data</p>
+      </div>
+    </div>
+    <div class="locale-toggle">
+      <button id="localeEN" class="locale-btn active">🇺🇸 EN</button>
+      <button id="localeTH" class="locale-btn">🇹🇭 TH</button>
     </div>
   </div>
 
   <div class="content">
     <div id="loading" class="loading">
       <div class="spinner"></div>
+      <span class="loading-text">Scanning form fields...</span>
     </div>
 
     <div id="main" style="display: none;">
       <div class="status">
         <span class="status-icon">📋</span>
-        <span class="status-text">พบ <span id="fieldCount" class="status-count">0</span> fields</span>
+        <span class="status-text">Found <span id="fieldCount" class="status-count">0</span> fields</span>
       </div>
 
       <div id="emptyState" class="empty-state" style="display: none;">
         <div class="empty-state-icon">🔍</div>
-        <p>ไม่พบ form fields ในหน้านี้</p>
+        <p>No form fields detected on this page.<br>Navigate to a page with a form and try again.</p>
       </div>
 
       <div id="fieldsWrapper" class="fields-container" style="display: none;">
         <div class="select-all">
           <input type="checkbox" id="selectAll" class="field-checkbox" checked>
-          <label for="selectAll">เลือกทั้งหมด</label>
+          <label for="selectAll">Select All</label>
         </div>
         <div id="fieldsList"></div>
       </div>
 
       <div id="buttonsWrapper" class="buttons" style="display: none;">
         <button id="randomBtn" class="btn btn-secondary">
-          🎲 Random ใหม่
+          🎲 Randomize
         </button>
         <button id="fillBtn" class="btn btn-primary">
-          ✅ Fill Form
+          ⚡ Fill Form
         </button>
       </div>
     </div>
@@ -298,7 +432,7 @@
 
   <div id="toast" class="toast">
     <span>✓</span>
-    <span id="toastMessage">Filled successfully!</span>
+    <span id="toastMessage">Success!</span>
   </div>
 
   <script src="popup.js"></script>

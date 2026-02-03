@@ -1,205 +1,384 @@
-// ===== Data Generators =====
-const generators = {
+// ===== Smart Form Filler - Enhanced Version =====
+// Auto-detect form fields and fill with smart, validated test data
+
+// ===== Configuration =====
+let currentLocale = 'en'; // 'en' or 'th'
+
+// ===== Data Collections =====
+const data = {
   // Thai names
   thaiFirstNames: ['สมชาย', 'สมหญิง', 'วิชัย', 'วิภา', 'ประเสริฐ', 'ประภา', 'สุรชัย', 'สุรีย์', 'อนันต์', 'อรุณี', 'ธนา', 'ธนิดา', 'พิชัย', 'พิมพ์', 'กิตติ', 'กิตติยา'],
   thaiLastNames: ['สุขใจ', 'มั่นคง', 'รุ่งเรือง', 'เจริญสุข', 'ศรีสวัสดิ์', 'พงษ์พานิช', 'วงศ์สกุล', 'แสงทอง', 'ทองดี', 'สมบูรณ์', 'พิทักษ์', 'รักษา'],
   
-  // English names
-  englishFirstNames: ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emma', 'Robert', 'Lisa', 'William', 'Anna'],
-  englishLastNames: ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis', 'Wilson', 'Anderson', 'Taylor'],
+  // English names (expanded)
+  englishFirstNames: [
+    'James', 'John', 'Robert', 'Michael', 'William', 'David', 'Joseph', 'Charles', 'Thomas', 'Christopher',
+    'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Emma', 'Sophia', 'Olivia', 'Emily', 'Jessica'
+  ],
+  englishLastNames: [
+    'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+    'Anderson', 'Taylor', 'Thomas', 'Moore', 'Jackson', 'Martin', 'Lee', 'Thompson', 'White', 'Harris'
+  ],
 
-  // Locations
-  districts: ['วัฒนา', 'คลองเตย', 'บางรัก', 'ปทุมวัน', 'สาทร', 'พระโขนง', 'บางนา', 'ห้วยขวาง', 'ดินแดง', 'จตุจักร'],
-  provinces: ['กรุงเทพมหานคร', 'เชียงใหม่', 'ภูเก็ต', 'ชลบุรี', 'นนทบุรี', 'สมุทรปราการ', 'ขอนแก่น', 'นครราชสีมา'],
-  
-  // Random helpers
+  // Thai locations
+  thaiDistricts: ['วัฒนา', 'คลองเตย', 'บางรัก', 'ปทุมวัน', 'สาทร', 'พระโขนง', 'บางนา', 'ห้วยขวาง', 'ดินแดง', 'จตุจักร'],
+  thaiProvinces: ['กรุงเทพมหานคร', 'เชียงใหม่', 'ภูเก็ต', 'ชลบุรี', 'นนทบุรี', 'สมุทรปราการ', 'ขอนแก่น', 'นครราชสีมา'],
+  thaiRoads: ['สุขุมวิท', 'รัชดาภิเษก', 'พหลโยธิน', 'ลาดพร้าว', 'สีลม', 'เพชรบุรี', 'พระราม 4', 'พระราม 9'],
+
+  // English locations
+  usStreets: ['Main St', 'Oak Ave', 'Maple Dr', 'Cedar Ln', 'Pine Rd', 'Elm St', 'Park Ave', 'Broadway', 'First Ave', 'Second St'],
+  usCities: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Seattle'],
+  usStates: ['NY', 'CA', 'IL', 'TX', 'AZ', 'FL', 'WA', 'CO', 'GA', 'NC'],
+
+  // Email domains
+  emailDomains: ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com', 'example.com', 'test.com'],
+
+  // Companies
+  companies: ['Acme Corp', 'Global Tech Inc.', 'Sunrise Holdings', 'Pacific Solutions', 'Metro Industries', 
+    'บริษัท ทดสอบ จำกัด', 'หจก. สมมติ', 'ABC Company Ltd.'],
+};
+
+// ===== Utility Functions =====
+const utils = {
   randomItem: (arr) => arr[Math.floor(Math.random() * arr.length)],
   randomNumber: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
   randomId: () => Math.random().toString(36).substring(2, 8),
-
-  // Generate functions
-  name: () => {
-    const useThai = Math.random() > 0.3;
-    if (useThai) {
-      return `${generators.randomItem(generators.thaiFirstNames)} ${generators.randomItem(generators.thaiLastNames)}`;
+  randomDigits: (count) => {
+    let result = '';
+    for (let i = 0; i < count; i++) {
+      result += Math.floor(Math.random() * 10);
     }
-    return `${generators.randomItem(generators.englishFirstNames)} ${generators.randomItem(generators.englishLastNames)}`;
+    return result;
+  },
+};
+
+// ===== Validators & Checksum Algorithms =====
+const validators = {
+  // Thai National ID checksum (Mod 11 algorithm)
+  calculateThaiIdChecksum: (first12Digits) => {
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      sum += parseInt(first12Digits[i]) * (13 - i);
+    }
+    const checksum = (11 - (sum % 11)) % 10;
+    return checksum.toString();
+  },
+
+  // Luhn algorithm for credit cards
+  calculateLuhnChecksum: (partialNumber) => {
+    let sum = 0;
+    for (let i = 0; i < partialNumber.length; i++) {
+      let digit = parseInt(partialNumber[partialNumber.length - 1 - i]);
+      if (i % 2 === 0) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
+    }
+    return ((10 - (sum % 10)) % 10).toString();
+  },
+
+  // Validate Thai National ID
+  isValidThaiId: (id) => {
+    if (id.length !== 13 || !/^\d{13}$/.test(id)) return false;
+    const first12 = id.substring(0, 12);
+    const expectedChecksum = validators.calculateThaiIdChecksum(first12);
+    return id[12] === expectedChecksum;
+  },
+
+  // Validate credit card with Luhn
+  isValidLuhn: (cc) => {
+    const nums = cc.replace(/\D/g, '');
+    let sum = 0;
+    let isEven = false;
+    for (let i = nums.length - 1; i >= 0; i--) {
+      let digit = parseInt(nums[i]);
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
+      isEven = !isEven;
+    }
+    return sum % 10 === 0;
+  },
+};
+
+// ===== Data Generators =====
+const generators = {
+  // ===== Names =====
+  name: () => {
+    if (currentLocale === 'th' || Math.random() > 0.7) {
+      return `${utils.randomItem(data.thaiFirstNames)} ${utils.randomItem(data.thaiLastNames)}`;
+    }
+    return `${utils.randomItem(data.englishFirstNames)} ${utils.randomItem(data.englishLastNames)}`;
   },
 
   firstName: () => {
-    return Math.random() > 0.3 
-      ? generators.randomItem(generators.thaiFirstNames)
-      : generators.randomItem(generators.englishFirstNames);
+    if (currentLocale === 'th' || Math.random() > 0.7) {
+      return utils.randomItem(data.thaiFirstNames);
+    }
+    return utils.randomItem(data.englishFirstNames);
   },
 
   lastName: () => {
-    return Math.random() > 0.3 
-      ? generators.randomItem(generators.thaiLastNames)
-      : generators.randomItem(generators.englishLastNames);
+    if (currentLocale === 'th' || Math.random() > 0.7) {
+      return utils.randomItem(data.thaiLastNames);
+    }
+    return utils.randomItem(data.englishLastNames);
   },
 
+  // ===== Contact =====
   email: () => {
-    const domains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'example.com', 'test.com'];
-    return `test_${generators.randomId()}@${generators.randomItem(domains)}`;
+    const name = utils.randomItem(data.englishFirstNames).toLowerCase();
+    return `${name}_${utils.randomId()}@${utils.randomItem(data.emailDomains)}`;
   },
 
   phone: () => {
-    const prefixes = ['081', '082', '083', '084', '085', '086', '087', '088', '089', '091', '092', '093', '094', '095', '096', '097', '098', '099', '061', '062', '063', '064', '065', '066'];
-    return `${generators.randomItem(prefixes)}${generators.randomNumber(1000000, 9999999)}`;
+    if (currentLocale === 'th') {
+      const prefixes = ['081', '082', '083', '084', '085', '086', '087', '088', '089', '091', '092', '093', '094', '095', '096', '097', '098', '099', '061', '062', '063', '064', '065', '066'];
+      return `${utils.randomItem(prefixes)}${utils.randomNumber(1000000, 9999999)}`;
+    }
+    // US format
+    return `+1${utils.randomNumber(200, 999)}${utils.randomNumber(2000000, 9999999)}`;
   },
 
   tel: () => generators.phone(),
 
+  // ===== Address =====
   address: () => {
-    const roads = ['สุขุมวิท', 'รัชดาภิเษก', 'พหลโยธิน', 'ลาดพร้าว', 'สีลม', 'เพชรบุรี', 'พระราม 4', 'พระราม 9'];
-    return `${generators.randomNumber(1, 999)}/${generators.randomNumber(1, 99)} ถ.${generators.randomItem(roads)} ${generators.randomItem(generators.districts)} ${generators.randomItem(generators.provinces)} ${generators.randomNumber(10100, 10900)}`;
+    if (currentLocale === 'th') {
+      return `${utils.randomNumber(1, 999)}/${utils.randomNumber(1, 99)} ถ.${utils.randomItem(data.thaiRoads)} ${utils.randomItem(data.thaiDistricts)} ${utils.randomItem(data.thaiProvinces)} ${utils.randomNumber(10100, 10900)}`;
+    }
+    return `${utils.randomNumber(1, 9999)} ${utils.randomItem(data.usStreets)}, ${utils.randomItem(data.usCities)}, ${utils.randomItem(data.usStates)} ${utils.randomNumber(10000, 99999)}`;
   },
 
+  postalCode: () => {
+    if (currentLocale === 'th') {
+      return utils.randomNumber(10100, 96220).toString();
+    }
+    return utils.randomNumber(10001, 99999).toString();
+  },
+
+  city: () => {
+    if (currentLocale === 'th') {
+      return utils.randomItem(data.thaiProvinces);
+    }
+    return utils.randomItem(data.usCities);
+  },
+
+  state: () => {
+    if (currentLocale === 'th') {
+      return utils.randomItem(data.thaiProvinces);
+    }
+    return utils.randomItem(data.usStates);
+  },
+
+  country: () => currentLocale === 'th' ? 'Thailand' : 'United States',
+
+  // ===== Dates =====
   date: () => {
     const today = new Date();
-    const futureDate = new Date(today.getTime() + generators.randomNumber(1, 90) * 24 * 60 * 60 * 1000);
+    const futureDate = new Date(today.getTime() + utils.randomNumber(1, 90) * 24 * 60 * 60 * 1000);
     return futureDate.toISOString().split('T')[0];
   },
 
   pastDate: () => {
     const today = new Date();
-    const pastDate = new Date(today.getTime() - generators.randomNumber(365, 365 * 50) * 24 * 60 * 60 * 1000);
+    const pastDate = new Date(today.getTime() - utils.randomNumber(365, 365 * 50) * 24 * 60 * 60 * 1000);
     return pastDate.toISOString().split('T')[0];
   },
 
-  number: () => generators.randomNumber(1, 100).toString(),
-
-  price: () => generators.randomNumber(100, 10000).toString(),
-
-  text: () => {
-    const texts = ['ทดสอบระบบ', 'Test data', 'รายละเอียดเพิ่มเติม', 'หมายเหตุ', 'ข้อมูลทดสอบ'];
-    return generators.randomItem(texts);
+  birthDate: () => {
+    // Generate age between 18-65
+    const today = new Date();
+    const age = utils.randomNumber(18, 65);
+    const birthYear = today.getFullYear() - age;
+    const month = utils.randomNumber(1, 12);
+    const day = utils.randomNumber(1, 28);
+    return `${birthYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   },
 
-  username: () => `user_${generators.randomId()}`,
-
-  password: () => `Pass${generators.randomId()}!${generators.randomNumber(10, 99)}`,
-
-  idCard: () => {
-    let id = generators.randomNumber(1, 9).toString();
-    for (let i = 0; i < 12; i++) {
-      id += generators.randomNumber(0, 9).toString();
-    }
+  // ===== Identity Documents =====
+  // Thai National ID with valid checksum
+  thaiNationalId: () => {
+    // First digit: 1-8 (region), avoid 0
+    let id = utils.randomNumber(1, 8).toString();
+    // Next 11 digits random
+    id += utils.randomDigits(11);
+    // 13th digit is checksum
+    id += validators.calculateThaiIdChecksum(id);
     return id;
   },
 
-  postalCode: () => generators.randomNumber(10100, 96220).toString(),
-
-  company: () => {
-    const companies = ['บริษัท ทดสอบ จำกัด', 'หจก. สมมติ', 'ABC Company Ltd.', 'Test Corp', 'Demo Inc.'];
-    return generators.randomItem(companies);
+  // Thai Corporate Tax ID (starts with 0)
+  thaiCorporateTaxId: () => {
+    // Corporate IDs start with 0
+    let id = '0';
+    // Next 11 digits random
+    id += utils.randomDigits(11);
+    // 13th digit is checksum
+    id += validators.calculateThaiIdChecksum(id);
+    return id;
   },
 
-  url: () => `https://example-${generators.randomId()}.com`,
+  // Generic ID card (for backward compatibility)
+  idCard: () => generators.thaiNationalId(),
 
-  roomNumber: () => `${generators.randomNumber(1, 9)}${generators.randomNumber(0, 9).toString().padStart(2, '0')}`,
+  passport: () => {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let passport = letters[Math.floor(Math.random() * 26)];
+    passport += letters[Math.floor(Math.random() * 26)];
+    passport += utils.randomDigits(7);
+    return passport;
+  },
 
-  adults: () => generators.randomNumber(1, 4).toString(),
+  // ===== Financial =====
+  creditCard: () => {
+    // Visa (4) or Mastercard (51-55)
+    const prefixes = ['4', '51', '52', '53', '54', '55'];
+    let cc = utils.randomItem(prefixes);
+    // Generate remaining digits (total should be 15 before checksum)
+    while (cc.length < 15) {
+      cc += Math.floor(Math.random() * 10);
+    }
+    // Add Luhn checksum
+    cc += validators.calculateLuhnChecksum(cc);
+    return cc;
+  },
 
-  children: () => generators.randomNumber(0, 2).toString(),
+  // Formatted credit card
+  creditCardFormatted: () => {
+    const cc = generators.creditCard();
+    return `${cc.slice(0, 4)} ${cc.slice(4, 8)} ${cc.slice(8, 12)} ${cc.slice(12, 16)}`;
+  },
 
-  nights: () => generators.randomNumber(1, 7).toString(),
+  cvv: () => utils.randomNumber(100, 999).toString(),
+
+  expiryDate: () => {
+    const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
+    const year = (new Date().getFullYear() + utils.randomNumber(1, 5)) % 100;
+    return `${month}/${year.toString().padStart(2, '0')}`;
+  },
+
+  expiryMonth: () => utils.randomNumber(1, 12).toString().padStart(2, '0'),
+  
+  expiryYear: () => (new Date().getFullYear() + utils.randomNumber(1, 5)).toString(),
+
+  price: () => utils.randomNumber(100, 10000).toString(),
+
+  amount: () => utils.randomNumber(1, 1000).toString(),
+
+  // ===== Account =====
+  username: () => `user_${utils.randomId()}`,
+
+  password: () => `Pass${utils.randomId()}!${utils.randomNumber(10, 99)}`,
+
+  // ===== Business =====
+  company: () => utils.randomItem(data.companies),
+
+  // ===== Hotel/Travel =====
+  roomNumber: () => `${utils.randomNumber(1, 9)}${utils.randomNumber(0, 9).toString().padStart(2, '0')}`,
+
+  adults: () => utils.randomNumber(1, 4).toString(),
+
+  children: () => utils.randomNumber(0, 2).toString(),
+
+  nights: () => utils.randomNumber(1, 7).toString(),
+
+  // ===== Generic =====
+  number: () => utils.randomNumber(1, 100).toString(),
+
+  text: () => {
+    const texts = ['Test data', 'Sample input', 'Demo content', 'Additional notes', 'For testing purposes'];
+    return utils.randomItem(texts);
+  },
+
+  url: () => `https://example-${utils.randomId()}.com`,
 };
 
 // ===== Field Detection Rules =====
 const fieldPatterns = [
   // Names
-  { patterns: ['full_name', 'fullname', 'name', 'guest_name', 'customer_name', 'ชื่อ'], generator: 'name', label: 'ชื่อ-นามสกุล' },
-  { patterns: ['first_name', 'firstname', 'fname', 'given_name', 'ชื่อจริง'], generator: 'firstName', label: 'ชื่อ' },
-  { patterns: ['last_name', 'lastname', 'lname', 'surname', 'family_name', 'นามสกุล'], generator: 'lastName', label: 'นามสกุล' },
+  { patterns: ['full_name', 'fullname', 'name', 'guest_name', 'customer_name', 'ชื่อ'], generator: 'name', label: 'Full Name' },
+  { patterns: ['first_name', 'firstname', 'fname', 'given_name', 'ชื่อจริง'], generator: 'firstName', label: 'First Name' },
+  { patterns: ['last_name', 'lastname', 'lname', 'surname', 'family_name', 'นามสกุล'], generator: 'lastName', label: 'Last Name' },
   
   // Contact
-  { patterns: ['email', 'e-mail', 'อีเมล'], generator: 'email', label: 'อีเมล' },
-  { patterns: ['phone', 'mobile', 'tel', 'telephone', 'contact_number', 'โทรศัพท์', 'เบอร์'], generator: 'phone', label: 'โทรศัพท์' },
+  { patterns: ['email', 'e-mail', 'อีเมล'], generator: 'email', label: 'Email' },
+  { patterns: ['phone', 'mobile', 'tel', 'telephone', 'contact_number', 'โทรศัพท์', 'เบอร์'], generator: 'phone', label: 'Phone' },
   
   // Address
-  { patterns: ['address', 'street', 'ที่อยู่', 'บ้านเลขที่'], generator: 'address', label: 'ที่อยู่' },
-  { patterns: ['postal', 'postcode', 'zipcode', 'zip', 'รหัสไปรษณีย์'], generator: 'postalCode', label: 'รหัสไปรษณีย์' },
+  { patterns: ['address', 'street', 'ที่อยู่', 'บ้านเลขที่'], generator: 'address', label: 'Address' },
+  { patterns: ['city', 'เมือง'], generator: 'city', label: 'City' },
+  { patterns: ['state', 'province', 'จังหวัด'], generator: 'state', label: 'State/Province' },
+  { patterns: ['country', 'ประเทศ'], generator: 'country', label: 'Country' },
+  { patterns: ['postal', 'postcode', 'zipcode', 'zip', 'รหัสไปรษณีย์'], generator: 'postalCode', label: 'Postal Code' },
   
   // Dates
-  { patterns: ['check_in', 'checkin', 'check-in', 'arrival', 'start_date', 'from_date', 'วันเข้าพัก'], generator: 'date', label: 'วันที่เข้า' },
-  { patterns: ['check_out', 'checkout', 'check-out', 'departure', 'end_date', 'to_date', 'วันออก'], generator: 'date', label: 'วันที่ออก' },
-  { patterns: ['birth', 'dob', 'birthday', 'วันเกิด'], generator: 'pastDate', label: 'วันเกิด' },
-  { patterns: ['date'], generator: 'date', label: 'วันที่' },
+  { patterns: ['check_in', 'checkin', 'check-in', 'arrival', 'start_date', 'from_date', 'วันเข้าพัก'], generator: 'date', label: 'Check-in Date' },
+  { patterns: ['check_out', 'checkout', 'check-out', 'departure', 'end_date', 'to_date', 'วันออก'], generator: 'date', label: 'Check-out Date' },
+  { patterns: ['birth', 'dob', 'birthday', 'date_of_birth', 'วันเกิด'], generator: 'birthDate', label: 'Birth Date' },
+  { patterns: ['date'], generator: 'date', label: 'Date' },
+  
+  // Identity Documents (with validation!)
+  { patterns: ['id_card', 'idcard', 'citizen_id', 'national_id', 'thai_id', 'บัตรประชาชน', 'เลขบัตร'], generator: 'thaiNationalId', label: 'Thai National ID' },
+  { patterns: ['tax_id', 'taxid', 'tin', 'tax_number', 'เลขประจำตัวผู้เสียภาษี'], generator: 'thaiNationalId', label: 'Tax ID (Individual)' },
+  { patterns: ['corporate_tax', 'company_tax', 'corporate_id', 'juristic_id', 'องค์กร', 'นิติบุคคล'], generator: 'thaiCorporateTaxId', label: 'Tax ID (Corporate)' },
+  { patterns: ['passport', 'passport_no', 'passport_number'], generator: 'passport', label: 'Passport' },
+  
+  // Financial
+  { patterns: ['credit_card', 'card_number', 'cc_number', 'creditcard', 'บัตรเครดิต'], generator: 'creditCard', label: 'Credit Card' },
+  { patterns: ['cvv', 'cvc', 'security_code', 'card_code'], generator: 'cvv', label: 'CVV' },
+  { patterns: ['expiry', 'exp_date', 'card_expiry', 'วันหมดอายุ'], generator: 'expiryDate', label: 'Expiry Date' },
+  { patterns: ['exp_month', 'expiry_month', 'card_month'], generator: 'expiryMonth', label: 'Expiry Month' },
+  { patterns: ['exp_year', 'expiry_year', 'card_year'], generator: 'expiryYear', label: 'Expiry Year' },
+  { patterns: ['price', 'amount', 'total', 'cost', 'ราคา', 'จำนวนเงิน'], generator: 'price', label: 'Price' },
   
   // Hotel specific
-  { patterns: ['room_number', 'room_no', 'room', 'ห้อง'], generator: 'roomNumber', label: 'เลขห้อง' },
-  { patterns: ['adult', 'adults', 'ผู้ใหญ่'], generator: 'adults', label: 'ผู้ใหญ่' },
-  { patterns: ['child', 'children', 'kids', 'เด็ก'], generator: 'children', label: 'เด็ก' },
-  { patterns: ['night', 'nights', 'คืน'], generator: 'nights', label: 'จำนวนคืน' },
-  
-  // Identity
-  { patterns: ['id_card', 'idcard', 'citizen_id', 'national_id', 'บัตรประชาชน'], generator: 'idCard', label: 'เลขบัตร ปชช.' },
-  { patterns: ['passport'], generator: 'text', label: 'Passport' },
+  { patterns: ['room_number', 'room_no', 'room', 'ห้อง'], generator: 'roomNumber', label: 'Room Number' },
+  { patterns: ['adult', 'adults', 'ผู้ใหญ่'], generator: 'adults', label: 'Adults' },
+  { patterns: ['child', 'children', 'kids', 'เด็ก'], generator: 'children', label: 'Children' },
+  { patterns: ['night', 'nights', 'คืน'], generator: 'nights', label: 'Nights' },
   
   // Account
   { patterns: ['username', 'user_name', 'login'], generator: 'username', label: 'Username' },
   { patterns: ['password', 'passwd', 'pwd', 'รหัสผ่าน'], generator: 'password', label: 'Password' },
   
   // Business
-  { patterns: ['company', 'organization', 'org', 'บริษัท', 'หน่วยงาน'], generator: 'company', label: 'บริษัท' },
-  { patterns: ['price', 'amount', 'total', 'cost', 'ราคา', 'จำนวนเงิน'], generator: 'price', label: 'ราคา' },
-  { patterns: ['quantity', 'qty', 'count', 'จำนวน'], generator: 'number', label: 'จำนวน' },
+  { patterns: ['company', 'organization', 'org', 'บริษัท', 'หน่วยงาน'], generator: 'company', label: 'Company' },
+  { patterns: ['quantity', 'qty', 'count', 'จำนวน'], generator: 'number', label: 'Quantity' },
   
   // Other
   { patterns: ['url', 'website', 'link'], generator: 'url', label: 'URL' },
-  { patterns: ['note', 'notes', 'comment', 'remark', 'description', 'หมายเหตุ', 'รายละเอียด'], generator: 'text', label: 'หมายเหตุ' },
+  { patterns: ['note', 'notes', 'comment', 'remark', 'description', 'หมายเหตุ', 'รายละเอียด'], generator: 'text', label: 'Notes' },
 ];
 
-// ===== Detect field type =====
-function detectFieldType(element) {
-  const name = (element.name || '').toLowerCase();
-  const id = (element.id || '').toLowerCase();
-  const type = (element.type || '').toLowerCase();
-  const placeholder = (element.placeholder || '').toLowerCase();
-  const label = getLabel(element).toLowerCase();
-  
-  const searchText = `${name} ${id} ${placeholder} ${label}`;
-  
-  // Check input type first
-  if (type === 'email') return { generator: 'email', label: 'อีเมล' };
-  if (type === 'tel') return { generator: 'phone', label: 'โทรศัพท์' };
-  if (type === 'url') return { generator: 'url', label: 'URL' };
-  if (type === 'date') return { generator: 'date', label: 'วันที่' };
-  if (type === 'number') return { generator: 'number', label: 'ตัวเลข' };
-  if (type === 'password') return { generator: 'password', label: 'Password' };
-  
-  // Check patterns
-  for (const rule of fieldPatterns) {
-    for (const pattern of rule.patterns) {
-      if (searchText.includes(pattern)) {
-        return { generator: rule.generator, label: rule.label };
-      }
-    }
-  }
-  
-  // Default
-  return { generator: 'text', label: 'ข้อความ' };
-}
-
-function getLabel(element) {
-  // Try to find associated label
-  if (element.id) {
-    const label = document.querySelector(`label[for="${element.id}"]`);
-    if (label) return label.textContent.trim();
-  }
-  
-  // Check parent label
-  const parentLabel = element.closest('label');
-  if (parentLabel) return parentLabel.textContent.trim();
-  
-  // Check aria-label
-  if (element.getAttribute('aria-label')) {
-    return element.getAttribute('aria-label');
-  }
-  
-  return '';
-}
+// Generator type options for override dropdown
+const generatorOptions = [
+  { value: 'auto', label: 'Auto-detect' },
+  { value: 'name', label: 'Full Name' },
+  { value: 'firstName', label: 'First Name' },
+  { value: 'lastName', label: 'Last Name' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'address', label: 'Address' },
+  { value: 'postalCode', label: 'Postal Code' },
+  { value: 'date', label: 'Date (Future)' },
+  { value: 'pastDate', label: 'Date (Past)' },
+  { value: 'birthDate', label: 'Birth Date' },
+  { value: 'thaiNationalId', label: 'Thai National ID ✓' },
+  { value: 'thaiCorporateTaxId', label: 'Corporate Tax ID ✓' },
+  { value: 'passport', label: 'Passport' },
+  { value: 'creditCard', label: 'Credit Card ✓' },
+  { value: 'cvv', label: 'CVV' },
+  { value: 'expiryDate', label: 'Expiry Date' },
+  { value: 'username', label: 'Username' },
+  { value: 'password', label: 'Password' },
+  { value: 'company', label: 'Company' },
+  { value: 'number', label: 'Number' },
+  { value: 'text', label: 'Text' },
+];
 
 // ===== Main Logic =====
 let detectedFields = [];
@@ -258,32 +437,39 @@ async function scanPage() {
   return results[0].result || [];
 }
 
+function detectFieldType(searchText, inputType) {
+  // Check input type first
+  if (inputType === 'email') return { generator: 'email', label: 'Email' };
+  if (inputType === 'tel') return { generator: 'phone', label: 'Phone' };
+  if (inputType === 'url') return { generator: 'url', label: 'URL' };
+  if (inputType === 'date') return { generator: 'date', label: 'Date' };
+  if (inputType === 'number') return { generator: 'number', label: 'Number' };
+  if (inputType === 'password') return { generator: 'password', label: 'Password' };
+  
+  // Check patterns
+  const lowerSearch = searchText.toLowerCase();
+  for (const rule of fieldPatterns) {
+    for (const pattern of rule.patterns) {
+      if (lowerSearch.includes(pattern)) {
+        return { generator: rule.generator, label: rule.label };
+      }
+    }
+  }
+  
+  return { generator: 'text', label: 'Text' };
+}
+
 function generateValues(fields) {
   return fields.map(field => {
-    const searchText = `${field.name} ${field.id} ${field.placeholder} ${field.labelText}`.toLowerCase();
+    const searchText = `${field.name} ${field.id} ${field.placeholder} ${field.labelText}`;
     
-    let detectedType = { generator: 'text', label: 'ข้อความ' };
-    
-    // Check input type first
-    if (field.type === 'email') detectedType = { generator: 'email', label: 'อีเมล' };
-    else if (field.type === 'tel') detectedType = { generator: 'phone', label: 'โทรศัพท์' };
-    else if (field.type === 'url') detectedType = { generator: 'url', label: 'URL' };
-    else if (field.type === 'date') detectedType = { generator: 'date', label: 'วันที่' };
-    else if (field.type === 'number') detectedType = { generator: 'number', label: 'ตัวเลข' };
-    else if (field.type === 'password') detectedType = { generator: 'password', label: 'Password' };
-    else {
-      // Check patterns
-      for (const rule of fieldPatterns) {
-        let matched = false;
-        for (const pattern of rule.patterns) {
-          if (searchText.includes(pattern)) {
-            detectedType = { generator: rule.generator, label: rule.label };
-            matched = true;
-            break;
-          }
-        }
-        if (matched) break;
-      }
+    // Use override if set, otherwise auto-detect
+    let detectedType;
+    if (field.generatorOverride && field.generatorOverride !== 'auto') {
+      const option = generatorOptions.find(o => o.value === field.generatorOverride);
+      detectedType = { generator: field.generatorOverride, label: option?.label || field.generatorOverride };
+    } else {
+      detectedType = detectFieldType(searchText, field.type);
     }
     
     // Generate value
@@ -292,11 +478,11 @@ function generateValues(fields) {
       // Random select option (skip first if it's empty/placeholder)
       const validOptions = field.options.filter(o => o.value !== '');
       if (validOptions.length > 0) {
-        value = generators.randomItem(validOptions).value;
+        value = utils.randomItem(validOptions).value;
       } else {
         value = field.options[0].value;
       }
-      detectedType.label = 'ตัวเลือก';
+      detectedType.label = 'Select Option';
     } else {
       const generatorFn = generators[detectedType.generator] || generators.text;
       value = generatorFn();
@@ -305,8 +491,10 @@ function generateValues(fields) {
     return {
       ...field,
       detectedType: detectedType.label,
+      generatorType: detectedType.generator,
       generatedValue: value,
-      enabled: true
+      enabled: field.enabled !== undefined ? field.enabled : true,
+      generatorOverride: field.generatorOverride || 'auto'
     };
   });
 }
@@ -352,6 +540,11 @@ function renderFields(fields) {
   fields.forEach((field, idx) => {
     const displayName = field.name || field.id || field.placeholder || `Field ${idx + 1}`;
     
+    // Build options for dropdown
+    const optionsHtml = generatorOptions.map(opt => 
+      `<option value="${opt.value}" ${field.generatorOverride === opt.value ? 'selected' : ''}>${opt.label}</option>`
+    ).join('');
+    
     const div = document.createElement('div');
     div.className = 'field-item';
     div.innerHTML = `
@@ -362,6 +555,9 @@ function renderFields(fields) {
           <span class="field-type">${field.detectedType}</span>
         </div>
         <div class="field-value">${field.generatedValue}</div>
+        <select class="field-type-select" data-idx="${idx}">
+          ${optionsHtml}
+        </select>
       </div>
     `;
     
@@ -376,6 +572,17 @@ function renderFields(fields) {
       updateSelectAll();
     });
   });
+  
+  // Add type override listeners
+  fieldsList.querySelectorAll('.field-type-select').forEach(select => {
+    select.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      detectedFields[idx].generatorOverride = e.target.value;
+      // Regenerate just this field
+      detectedFields = generateValues(detectedFields);
+      renderFields(detectedFields);
+    });
+  });
 }
 
 function updateSelectAll() {
@@ -385,6 +592,13 @@ function updateSelectAll() {
   
   selectAll.checked = allChecked;
   selectAll.indeterminate = someChecked && !allChecked;
+}
+
+function updateLocaleUI() {
+  document.querySelectorAll('.locale-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.getElementById(`locale${currentLocale.toUpperCase()}`).classList.add('active');
 }
 
 function showToast(message) {
@@ -427,8 +641,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     loading.style.display = 'none';
     main.style.display = 'block';
     emptyState.style.display = 'block';
-    emptyState.querySelector('p').textContent = 'เกิดข้อผิดพลาด: ' + err.message;
+    emptyState.querySelector('p').textContent = 'Error: ' + err.message;
   }
+  
+  // Locale toggle handlers
+  document.getElementById('localeEN').addEventListener('click', () => {
+    currentLocale = 'en';
+    updateLocaleUI();
+    detectedFields = generateValues(detectedFields);
+    renderFields(detectedFields);
+    showToast('🇺🇸 Switched to English');
+  });
+  
+  document.getElementById('localeTH').addEventListener('click', () => {
+    currentLocale = 'th';
+    updateLocaleUI();
+    detectedFields = generateValues(detectedFields);
+    renderFields(detectedFields);
+    showToast('🇹🇭 Switched to Thai');
+  });
   
   // Select all handler
   document.getElementById('selectAll').addEventListener('change', (e) => {
@@ -442,15 +673,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       ...f,
       generatedValue: undefined
     })));
-    // Preserve enabled state
     renderFields(detectedFields);
-    showToast('🎲 Random ค่าใหม่แล้ว!');
+    showToast('🎲 Values randomized!');
   });
   
   // Fill button
   document.getElementById('fillBtn').addEventListener('click', async () => {
     await fillForm(detectedFields);
     const filledCount = detectedFields.filter(f => f.enabled).length;
-    showToast(`✅ Fill แล้ว ${filledCount} fields!`);
+    showToast(`✅ Filled ${filledCount} fields!`);
   });
 });
