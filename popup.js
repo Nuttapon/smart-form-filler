@@ -4,38 +4,35 @@
 // ===== Configuration =====
 let currentLocale = 'en'; // 'en' or 'th'
 
-// ===== Data Collections =====
-const data = {
-  // Thai names
-  thaiFirstNames: ['สมชาย', 'สมหญิง', 'วิชัย', 'วิภา', 'ประเสริฐ', 'ประภา', 'สุรชัย', 'สุรีย์', 'อนันต์', 'อรุณี', 'ธนา', 'ธนิดา', 'พิชัย', 'พิมพ์', 'กิตติ', 'กิตติยา'],
-  thaiLastNames: ['สุขใจ', 'มั่นคง', 'รุ่งเรือง', 'เจริญสุข', 'ศรีสวัสดิ์', 'พงษ์พานิช', 'วงศ์สกุล', 'แสงทอง', 'ทองดี', 'สมบูรณ์', 'พิทักษ์', 'รักษา'],
-  
-  // English names (expanded)
-  englishFirstNames: [
-    'James', 'John', 'Robert', 'Michael', 'William', 'David', 'Joseph', 'Charles', 'Thomas', 'Christopher',
-    'Mary', 'Patricia', 'Jennifer', 'Linda', 'Elizabeth', 'Emma', 'Sophia', 'Olivia', 'Emily', 'Jessica'
+// ===== Faker Integration =====
+// Note: Faker v3.1.0 UMD bundle sets a global 'faker' object.
+// To support TH/EN locales, we toggle the locale property.
+const setFakerLocale = (locale) => {
+  if (typeof faker !== 'undefined') {
+    faker.locale = locale === 'th' ? 'th' : 'en';
+  }
+};
+
+// ===== Data Collections (Thai Fallback) =====
+// Note: Some Faker bundles (like v5.5.3 min) lack Thai locale. This ensures it always works.
+const thaiData = {
+  firstNames: ['สมชาย', 'สมหญิง', 'วิชัย', 'วิภา', 'ประเสริฐ', 'ประภา', 'สุรชัย', 'สุรีย์', 'อนันต์', 'อรุณี', 'ธนา', 'ธนิดา', 'พิชัย', 'พิมพ์', 'กิตติ', 'กิตติยา', 'มานะ', 'ชูใจ', 'สมศักดิ์', 'พรทิพย์', 'วรรณพร', 'ธนพล', 'ระวี', 'สิริ', 'นที', 'เมฆา', 'ตะวัน'],
+  lastNames: ['สุขใจ', 'มั่นคง', 'รุ่งเรือง', 'เจริญสุข', 'ศรีสวัสดิ์', 'พงษ์พานิช', 'วงศ์สกุล', 'แสงทอง', 'ทองดี', 'สมบูรณ์', 'พิทักษ์', 'รักษา', 'วิเศษสุข', 'ปัญญาสกุล', 'เลิศวิวัฒน์', 'สุขนิรันดร์', 'ดีประเสริฐ', 'วัฒนเมธี'],
+  districts: ['วัฒนา', 'คลองเตย', 'บางรัก', 'ปทุมวัน', 'สาทร', 'พระโขนง', 'บางนา', 'ห้วยขวาง', 'ดินแดง', 'จตุจักร', 'ลาดพร้าว', 'พญาไท', 'ราชเทวี'],
+  provinces: ['กรุงเทพมหานคร', 'เชียงใหม่', 'ภูเก็ต', 'ชลบุรี', 'นนทบุรี', 'สมุทรปราการ', 'ขอนแก่น', 'นครราชสีมา', 'สงขลา', 'นครสวรรค์', 'อุดรธานี'],
+  roads: ['สุขุมวิท', 'รัชดาภิเษก', 'พหลโยธิน', 'ลาดพร้าว', 'สีลม', 'เพชรบุรี', 'พระราม 4', 'พระราม 9', 'วิภาวดีรังสิต', 'สาทร', 'ประดิษฐ์มนูธรรม'],
+  companies: ['บริษัท ทดสอบ จำกัด', 'หจก. สมมติ', 'ซีพีออลล์', 'ปตท.', 'ไทยเบฟ', 'กสิกรไทย', 'เอไอเอส', 'ทรู', 'เซ็นทรัล', 'ธนาคารไทยพาณิชย์', 'การบินไทย'],
+  jobTitles: ['ผู้จัดการฝ่ายขาย', 'วิศวกรซอฟต์แวร์', 'นักการตลาดดิจิทัล', 'ผู้อำนวยการโครงการ', 'หัวหน้าแผนกบัญชี', 'ที่ปรึกษาทางธุรกิจ', 'นักวาดภาพประกอบ', 'พนักงานต้อนรับ'],
+  notes: [
+    'ขอใบเสร็จรับเงินด้วยครับ',
+    'กรุณาส่งสินค้าในช่วงเช้าเท่านั้น',
+    'ไม่มีสัตว์เลี้ยง',
+    'ต้องการห้องพักชั้นสูง',
+    'ขอที่จอดรถใกล้ทางเข้า',
+    'ขอบคุณมากครับสำหรับการบริการ',
+    'รบกวนตรวจสอบสินค้าก่อนส่ง'
   ],
-  englishLastNames: [
-    'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
-    'Anderson', 'Taylor', 'Thomas', 'Moore', 'Jackson', 'Martin', 'Lee', 'Thompson', 'White', 'Harris'
-  ],
-
-  // Thai locations
-  thaiDistricts: ['วัฒนา', 'คลองเตย', 'บางรัก', 'ปทุมวัน', 'สาทร', 'พระโขนง', 'บางนา', 'ห้วยขวาง', 'ดินแดง', 'จตุจักร'],
-  thaiProvinces: ['กรุงเทพมหานคร', 'เชียงใหม่', 'ภูเก็ต', 'ชลบุรี', 'นนทบุรี', 'สมุทรปราการ', 'ขอนแก่น', 'นครราชสีมา'],
-  thaiRoads: ['สุขุมวิท', 'รัชดาภิเษก', 'พหลโยธิน', 'ลาดพร้าว', 'สีลม', 'เพชรบุรี', 'พระราม 4', 'พระราม 9'],
-
-  // English locations
-  usStreets: ['Main St', 'Oak Ave', 'Maple Dr', 'Cedar Ln', 'Pine Rd', 'Elm St', 'Park Ave', 'Broadway', 'First Ave', 'Second St'],
-  usCities: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Seattle'],
-  usStates: ['NY', 'CA', 'IL', 'TX', 'AZ', 'FL', 'WA', 'CO', 'GA', 'NC'],
-
-  // Email domains
-  emailDomains: ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com', 'example.com', 'test.com'],
-
-  // Companies
-  companies: ['Acme Corp', 'Global Tech Inc.', 'Sunrise Holdings', 'Pacific Solutions', 'Metro Industries', 
-    'บริษัท ทดสอบ จำกัด', 'หจก. สมมติ', 'ABC Company Ltd.'],
+  countries: ['ประเทศไทย', 'ญี่ปุ่น', 'สหรัฐอเมริกา', 'อังกฤษ', 'ฝรั่งเศส', 'เยอรมนี', 'เกาหลีใต้', 'จีน', 'สิงคโปร์']
 };
 
 // ===== Utility Functions =====
@@ -108,39 +105,43 @@ const validators = {
 const generators = {
   // ===== Names =====
   name: () => {
-    if (currentLocale === 'th' || Math.random() > 0.7) {
-      return `${utils.randomItem(data.thaiFirstNames)} ${utils.randomItem(data.thaiLastNames)}`;
+    if (currentLocale === 'th') {
+      return `${utils.randomItem(thaiData.firstNames)} ${utils.randomItem(thaiData.lastNames)}`;
     }
-    return `${utils.randomItem(data.englishFirstNames)} ${utils.randomItem(data.englishLastNames)}`;
+    setFakerLocale('en');
+    return faker.name.findName();
   },
 
   firstName: () => {
-    if (currentLocale === 'th' || Math.random() > 0.7) {
-      return utils.randomItem(data.thaiFirstNames);
+    if (currentLocale === 'th') {
+      return utils.randomItem(thaiData.firstNames);
     }
-    return utils.randomItem(data.englishFirstNames);
+    setFakerLocale('en');
+    return faker.name.firstName();
   },
 
   lastName: () => {
-    if (currentLocale === 'th' || Math.random() > 0.7) {
-      return utils.randomItem(data.thaiLastNames);
+    if (currentLocale === 'th') {
+      return utils.randomItem(thaiData.lastNames);
     }
-    return utils.randomItem(data.englishLastNames);
+    setFakerLocale('en');
+    return faker.name.lastName();
   },
 
   // ===== Contact =====
   email: () => {
-    const name = utils.randomItem(data.englishFirstNames).toLowerCase();
-    return `${name}_${utils.randomId()}@${utils.randomItem(data.emailDomains)}`;
+    setFakerLocale('en'); // Always use'en' for email format
+    return faker.internet.email().toLowerCase();
   },
 
   phone: () => {
+    setFakerLocale(currentLocale);
     if (currentLocale === 'th') {
       const prefixes = ['081', '082', '083', '084', '085', '086', '087', '088', '089', '091', '092', '093', '094', '095', '096', '097', '098', '099', '061', '062', '063', '064', '065', '066'];
       return `${utils.randomItem(prefixes)}${utils.randomNumber(1000000, 9999999)}`;
     }
     // US format
-    return `+1${utils.randomNumber(200, 999)}${utils.randomNumber(2000000, 9999999)}`;
+    return faker.phone.phoneNumber();
   },
 
   tel: () => generators.phone(),
@@ -148,55 +149,77 @@ const generators = {
   // ===== Address =====
   address: () => {
     if (currentLocale === 'th') {
-      return `${utils.randomNumber(1, 999)}/${utils.randomNumber(1, 99)} ถ.${utils.randomItem(data.thaiRoads)} ${utils.randomItem(data.thaiDistricts)} ${utils.randomItem(data.thaiProvinces)} ${utils.randomNumber(10100, 10900)}`;
+      return `${utils.randomNumber(1, 999)}/${utils.randomNumber(1, 99)} ถ.${utils.randomItem(thaiData.roads)} ${utils.randomItem(thaiData.districts)} ${utils.randomItem(thaiData.provinces)} ${utils.randomNumber(10100, 10900)}`;
     }
-    return `${utils.randomNumber(1, 9999)} ${utils.randomItem(data.usStreets)}, ${utils.randomItem(data.usCities)}, ${utils.randomItem(data.usStates)} ${utils.randomNumber(10000, 99999)}`;
+    setFakerLocale('en');
+    return faker.address.streetAddress() + ', ' + faker.address.city() + ', ' + faker.address.state() + ' ' + faker.address.zipCode();
+  },
+
+  street: () => {
+    if (currentLocale === 'th') {
+      return `ถ.${utils.randomItem(thaiData.roads)}`;
+    }
+    setFakerLocale('en');
+    return faker.address.streetName();
   },
 
   postalCode: () => {
     if (currentLocale === 'th') {
-      return utils.randomNumber(10100, 96220).toString();
+      return utils.randomNumber(10100, 10900).toString();
     }
-    return utils.randomNumber(10001, 99999).toString();
+    setFakerLocale('en');
+    return faker.address.zipCode();
   },
 
   city: () => {
     if (currentLocale === 'th') {
-      return utils.randomItem(data.thaiProvinces);
+      return utils.randomItem(thaiData.provinces);
     }
-    return utils.randomItem(data.usCities);
+    setFakerLocale('en');
+    return faker.address.city();
   },
 
   state: () => {
     if (currentLocale === 'th') {
-      return utils.randomItem(data.thaiProvinces);
+      return utils.randomItem(thaiData.provinces);
     }
-    return utils.randomItem(data.usStates);
+    setFakerLocale('en');
+    return faker.address.state();
   },
 
-  country: () => currentLocale === 'th' ? 'Thailand' : 'United States',
+  country: () => {
+    if (currentLocale === 'th') {
+      return utils.randomItem(thaiData.countries);
+    }
+    setFakerLocale('en');
+    return faker.address.country();
+  },
 
   // ===== Dates =====
   date: () => {
-    const today = new Date();
-    const futureDate = new Date(today.getTime() + utils.randomNumber(1, 90) * 24 * 60 * 60 * 1000);
+    if (currentLocale === 'th') {
+      const year = new Date().getFullYear();
+      const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
+      const day = utils.randomNumber(1, 28).toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    setFakerLocale('en');
+    const futureDate = faker.date.future();
     return futureDate.toISOString().split('T')[0];
   },
 
   pastDate: () => {
-    const today = new Date();
-    const pastDate = new Date(today.getTime() - utils.randomNumber(365, 365 * 50) * 24 * 60 * 60 * 1000);
-    return pastDate.toISOString().split('T')[0];
+    const year = new Date().getFullYear() - utils.randomNumber(1, 10);
+    const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
+    const day = utils.randomNumber(1, 28).toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   },
 
   birthDate: () => {
-    // Generate age between 18-65
-    const today = new Date();
-    const age = utils.randomNumber(18, 65);
-    const birthYear = today.getFullYear() - age;
-    const month = utils.randomNumber(1, 12);
-    const day = utils.randomNumber(1, 28);
-    return `${birthYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    const year = new Date().getFullYear() - utils.randomNumber(20, 50);
+    const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
+    const day = utils.randomNumber(1, 28).toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   },
 
   // ===== Identity Documents =====
@@ -265,17 +288,49 @@ const generators = {
   
   expiryYear: () => (new Date().getFullYear() + utils.randomNumber(1, 5)).toString(),
 
-  price: () => utils.randomNumber(100, 10000).toString(),
+  price: () => {
+    if (currentLocale === 'th') {
+      return utils.randomNumber(500, 5000).toString();
+    }
+    setFakerLocale('en');
+    return faker.finance.amount();
+  },
 
   amount: () => utils.randomNumber(1, 1000).toString(),
 
   // ===== Account =====
-  username: () => `user_${utils.randomId()}`,
+  username: () => {
+    if (currentLocale === 'th') {
+      return `user_${utils.randomId()}`;
+    }
+    setFakerLocale('en');
+    return faker.internet.userName();
+  },
 
-  password: () => `Pass${utils.randomId()}!${utils.randomNumber(10, 99)}`,
+  password: () => {
+    if (currentLocale === 'th') {
+      return `Pass${utils.randomNumber(1000, 9999)}!`;
+    }
+    setFakerLocale('en');
+    return faker.internet.password(12, true);
+  },
 
   // ===== Business =====
-  company: () => utils.randomItem(data.companies),
+  company: () => {
+    if (currentLocale === 'th') {
+      return utils.randomItem(thaiData.companies);
+    }
+    setFakerLocale('en');
+    return faker.company.companyName();
+  },
+
+  jobTitle: () => {
+    if (currentLocale === 'th') {
+      return utils.randomItem(thaiData.jobTitles);
+    }
+    setFakerLocale('en');
+    return faker.name.jobTitle();
+  },
 
   // ===== Hotel/Travel =====
   roomNumber: () => `${utils.randomNumber(1, 9)}${utils.randomNumber(0, 9).toString().padStart(2, '0')}`,
@@ -290,19 +345,36 @@ const generators = {
   number: () => utils.randomNumber(1, 100).toString(),
 
   text: () => {
-    const texts = ['Test data', 'Sample input', 'Demo content', 'Additional notes', 'For testing purposes'];
-    return utils.randomItem(texts);
+    if (currentLocale === 'th') {
+      return utils.randomItem(thaiData.notes);
+    }
+    setFakerLocale('en');
+    return faker.lorem.sentence();
   },
 
-  url: () => `https://example-${utils.randomId()}.com`,
+  paragraph: () => {
+    if (currentLocale === 'th') {
+      return thaiData.notes.slice(0, 3).join(' ');
+    }
+    setFakerLocale('en');
+    return faker.lorem.paragraph();
+  },
+
+  url: () => {
+    if (currentLocale === 'th') {
+      return `https://www.example.co.th/${utils.randomId()}`;
+    }
+    return faker.internet.url();
+  },
 };
 
 // ===== Field Detection Rules =====
 const fieldPatterns = [
-  // Names
-  { patterns: ['full_name', 'fullname', 'name', 'guest_name', 'customer_name', 'ชื่อ'], generator: 'name', label: 'Full Name' },
+  // Names (Specific patterns first!)
   { patterns: ['first_name', 'firstname', 'fname', 'given_name', 'ชื่อจริง'], generator: 'firstName', label: 'First Name' },
   { patterns: ['last_name', 'lastname', 'lname', 'surname', 'family_name', 'นามสกุล'], generator: 'lastName', label: 'Last Name' },
+  { patterns: ['full_name', 'fullname', 'name', 'guest_name', 'customer_name', 'ชื่อ'], generator: 'name', label: 'Full Name' },
+  { patterns: ['job', 'title', 'position', 'ตำแหน่ง'], generator: 'jobTitle', label: 'Job Title' },
   
   // Contact
   { patterns: ['email', 'e-mail', 'อีเมล'], generator: 'email', label: 'Email' },
@@ -360,6 +432,7 @@ const generatorOptions = [
   { value: 'name', label: 'Full Name' },
   { value: 'firstName', label: 'First Name' },
   { value: 'lastName', label: 'Last Name' },
+  { value: 'jobTitle', label: 'Job Title' },
   { value: 'email', label: 'Email' },
   { value: 'phone', label: 'Phone' },
   { value: 'address', label: 'Address' },
@@ -377,7 +450,9 @@ const generatorOptions = [
   { value: 'password', label: 'Password' },
   { value: 'company', label: 'Company' },
   { value: 'number', label: 'Number' },
-  { value: 'text', label: 'Text' },
+  { value: 'text', label: 'Sentence' },
+  { value: 'paragraph', label: 'Paragraph' },
+  { value: 'url', label: 'URL' },
 ];
 
 // ===== Main Logic =====
@@ -613,7 +688,9 @@ function renderFields(fields) {
   // Add click-to-copy listeners for field value
   fieldsList.querySelectorAll('.field-value').forEach(div => {
     div.addEventListener('click', async (e) => {
-      const idx = parseInt(e.currentTarget.dataset.idx);
+      // CAPTURE target elements before any awaits to avoid null references in Chrome
+      const el = e.currentTarget;
+      const idx = parseInt(el.dataset.idx);
       const value = detectedFields[idx].generatedValue;
       
       try {
@@ -621,7 +698,6 @@ function renderFields(fields) {
         showToast('Copied to clipboard!', '📋');
         
         // Visual feedback
-        const el = e.currentTarget;
         const originalColor = el.style.color;
         el.style.color = '#10b981'; // Green feedback
         setTimeout(() => {
@@ -712,6 +788,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   document.getElementById('localeTH').addEventListener('click', () => {
     currentLocale = 'th';
+    setFakerLocale('th'); // Force immediate locale change
     updateLocaleUI();
     detectedFields = generateValues(detectedFields);
     renderFields(detectedFields);
