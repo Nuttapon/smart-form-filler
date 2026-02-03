@@ -1,515 +1,84 @@
-// ===== Smart Form Filler - Enhanced Version =====
-// Auto-detect form fields and fill with smart, validated test data
+// ===== Smart Form Filler - Modular Version =====
+// Uses: validators.js, generators.js, fieldPatterns.js
+// Features: Linked Fields, Field Grouping, Debounce, Error Handling
 
-// ===== Configuration =====
-let currentLocale = 'en'; // 'en' or 'th'
+// ===== Debounce Utility =====
+function debounce(fn, delay) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+}
 
-// ===== Faker Integration =====
-// Note: Faker v3.1.0 UMD bundle sets a global 'faker' object.
-// To support TH/EN locales, we toggle the locale property.
-const setFakerLocale = (locale) => {
-  if (typeof faker !== 'undefined') {
-    faker.locale = locale === 'th' ? 'th' : 'en';
-  }
-};
-
-// ===== Data Collections (Thai Fallback) =====
-// Note: Some Faker bundles (like v5.5.3 min) lack Thai locale. This ensures it always works.
-const thaiData = {
-  firstNames: ['สมชาย', 'สมหญิง', 'วิชัย', 'วิภา', 'ประเสริฐ', 'ประภา', 'สุรชัย', 'สุรีย์', 'อนันต์', 'อรุณี', 'ธนา', 'ธนิดา', 'พิชัย', 'พิมพ์', 'กิตติ', 'กิตติยา', 'มานะ', 'ชูใจ', 'สมศักดิ์', 'พรทิพย์', 'วรรณพร', 'ธนพล', 'ระวี', 'สิริ', 'นที', 'เมฆา', 'ตะวัน'],
-  lastNames: ['สุขใจ', 'มั่นคง', 'รุ่งเรือง', 'เจริญสุข', 'ศรีสวัสดิ์', 'พงษ์พานิช', 'วงศ์สกุล', 'แสงทอง', 'ทองดี', 'สมบูรณ์', 'พิทักษ์', 'รักษา', 'วิเศษสุข', 'ปัญญาสกุล', 'เลิศวิวัฒน์', 'สุขนิรันดร์', 'ดีประเสริฐ', 'วัฒนเมธี'],
-  districts: ['วัฒนา', 'คลองเตย', 'บางรัก', 'ปทุมวัน', 'สาทร', 'พระโขนง', 'บางนา', 'ห้วยขวาง', 'ดินแดง', 'จตุจักร', 'ลาดพร้าว', 'พญาไท', 'ราชเทวี'],
-  provinces: ['กรุงเทพมหานคร', 'เชียงใหม่', 'ภูเก็ต', 'ชลบุรี', 'นนทบุรี', 'สมุทรปราการ', 'ขอนแก่น', 'นครราชสีมา', 'สงขลา', 'นครสวรรค์', 'อุดรธานี'],
-  roads: ['สุขุมวิท', 'รัชดาภิเษก', 'พหลโยธิน', 'ลาดพร้าว', 'สีลม', 'เพชรบุรี', 'พระราม 4', 'พระราม 9', 'วิภาวดีรังสิต', 'สาทร', 'ประดิษฐ์มนูธรรม'],
-  companies: ['บริษัท ทดสอบ จำกัด', 'หจก. สมมติ', 'ซีพีออลล์', 'ปตท.', 'ไทยเบฟ', 'กสิกรไทย', 'เอไอเอส', 'ทรู', 'เซ็นทรัล', 'ธนาคารไทยพาณิชย์', 'การบินไทย'],
-  jobTitles: ['ผู้จัดการฝ่ายขาย', 'วิศวกรซอฟต์แวร์', 'นักการตลาดดิจิทัล', 'ผู้อำนวยการโครงการ', 'หัวหน้าแผนกบัญชี', 'ที่ปรึกษาทางธุรกิจ', 'นักวาดภาพประกอบ', 'พนักงานต้อนรับ'],
-  notes: [
-    'ขอใบเสร็จรับเงินด้วยครับ',
-    'กรุณาส่งสินค้าในช่วงเช้าเท่านั้น',
-    'ไม่มีสัตว์เลี้ยง',
-    'ต้องการห้องพักชั้นสูง',
-    'ขอที่จอดรถใกล้ทางเข้า',
-    'ขอบคุณมากครับสำหรับการบริการ',
-    'รบกวนตรวจสอบสินค้าก่อนส่ง'
-  ],
-  countries: ['ประเทศไทย', 'ญี่ปุ่น', 'สหรัฐอเมริกา', 'อังกฤษ', 'ฝรั่งเศส', 'เยอรมนี', 'เกาหลีใต้', 'จีน', 'สิงคโปร์']
-};
-
-// ===== Utility Functions =====
-const utils = {
-  randomItem: (arr) => arr[Math.floor(Math.random() * arr.length)],
-  randomNumber: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
-  randomId: () => Math.random().toString(36).substring(2, 8),
-  randomDigits: (count) => {
-    let result = '';
-    for (let i = 0; i < count; i++) {
-      result += Math.floor(Math.random() * 10);
-    }
-    return result;
-  },
-};
-
-// ===== Validators & Checksum Algorithms =====
-const validators = {
-  // Thai National ID checksum (Mod 11 algorithm)
-  calculateThaiIdChecksum: (first12Digits) => {
-    let sum = 0;
-    for (let i = 0; i < 12; i++) {
-      sum += parseInt(first12Digits[i]) * (13 - i);
-    }
-    const checksum = (11 - (sum % 11)) % 10;
-    return checksum.toString();
-  },
-
-  // Luhn algorithm for credit cards
-  calculateLuhnChecksum: (partialNumber) => {
-    let sum = 0;
-    for (let i = 0; i < partialNumber.length; i++) {
-      let digit = parseInt(partialNumber[partialNumber.length - 1 - i]);
-      if (i % 2 === 0) {
-        digit *= 2;
-        if (digit > 9) digit -= 9;
-      }
-      sum += digit;
-    }
-    return ((10 - (sum % 10)) % 10).toString();
-  },
-
-  // Validate Thai National ID
-  isValidThaiId: (id) => {
-    if (id.length !== 13 || !/^\d{13}$/.test(id)) return false;
-    const first12 = id.substring(0, 12);
-    const expectedChecksum = validators.calculateThaiIdChecksum(first12);
-    return id[12] === expectedChecksum;
-  },
-
-  // Validate credit card with Luhn
-  isValidLuhn: (cc) => {
-    const nums = cc.replace(/\D/g, '');
-    let sum = 0;
-    let isEven = false;
-    for (let i = nums.length - 1; i >= 0; i--) {
-      let digit = parseInt(nums[i]);
-      if (isEven) {
-        digit *= 2;
-        if (digit > 9) digit -= 9;
-      }
-      sum += digit;
-      isEven = !isEven;
-    }
-    return sum % 10 === 0;
-  },
-};
-
-// ===== Data Generators =====
-const generators = {
-  // ===== Names =====
-  name: () => {
-    if (currentLocale === 'th') {
-      return `${utils.randomItem(thaiData.firstNames)} ${utils.randomItem(thaiData.lastNames)}`;
-    }
-    setFakerLocale('en');
-    return faker.name.findName();
-  },
-
-  firstName: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.firstNames);
-    }
-    setFakerLocale('en');
-    return faker.name.firstName();
-  },
-
-  lastName: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.lastNames);
-    }
-    setFakerLocale('en');
-    return faker.name.lastName();
-  },
-
-  // ===== Contact =====
-  email: () => {
-    setFakerLocale('en'); // Always use'en' for email format
-    return faker.internet.email().toLowerCase();
-  },
-
-  phone: () => {
-    setFakerLocale(currentLocale);
-    if (currentLocale === 'th') {
-      const prefixes = ['081', '082', '083', '084', '085', '086', '087', '088', '089', '091', '092', '093', '094', '095', '096', '097', '098', '099', '061', '062', '063', '064', '065', '066'];
-      return `${utils.randomItem(prefixes)}${utils.randomNumber(1000000, 9999999)}`;
-    }
-    // US format
-    return faker.phone.phoneNumber();
-  },
-
-  tel: () => generators.phone(),
-
-  // ===== Address =====
-  address: () => {
-    if (currentLocale === 'th') {
-      return `${utils.randomNumber(1, 999)}/${utils.randomNumber(1, 99)} ถ.${utils.randomItem(thaiData.roads)} ${utils.randomItem(thaiData.districts)} ${utils.randomItem(thaiData.provinces)} ${utils.randomNumber(10100, 10900)}`;
-    }
-    setFakerLocale('en');
-    return faker.address.streetAddress() + ', ' + faker.address.city() + ', ' + faker.address.state() + ' ' + faker.address.zipCode();
-  },
-
-  street: () => {
-    if (currentLocale === 'th') {
-      return `ถ.${utils.randomItem(thaiData.roads)}`;
-    }
-    setFakerLocale('en');
-    return faker.address.streetName();
-  },
-
-  postalCode: () => {
-    if (currentLocale === 'th') {
-      return utils.randomNumber(10100, 10900).toString();
-    }
-    setFakerLocale('en');
-    return faker.address.zipCode();
-  },
-
-  city: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.provinces);
-    }
-    setFakerLocale('en');
-    return faker.address.city();
-  },
-
-  state: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.provinces);
-    }
-    setFakerLocale('en');
-    return faker.address.state();
-  },
-
-  country: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.countries);
-    }
-    setFakerLocale('en');
-    return faker.address.country();
-  },
-
-  // ===== Dates =====
-  date: () => {
-    if (currentLocale === 'th') {
-      const year = new Date().getFullYear();
-      const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
-      const day = utils.randomNumber(1, 28).toString().padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
-    setFakerLocale('en');
-    const futureDate = faker.date.future();
-    return futureDate.toISOString().split('T')[0];
-  },
-
-  pastDate: () => {
-    const year = new Date().getFullYear() - utils.randomNumber(1, 10);
-    const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
-    const day = utils.randomNumber(1, 28).toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  },
-
-  birthDate: () => {
-    const year = new Date().getFullYear() - utils.randomNumber(20, 50);
-    const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
-    const day = utils.randomNumber(1, 28).toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  },
-
-  // ===== Identity Documents =====
-  // Thai National ID with valid checksum
-  thaiNationalId: () => {
-    // First digit: 1-8 (region), avoid 0
-    let id = utils.randomNumber(1, 8).toString();
-    // Next 11 digits random
-    id += utils.randomDigits(11);
-    // 13th digit is checksum
-    id += validators.calculateThaiIdChecksum(id);
-    return id;
-  },
-
-  // Thai Corporate Tax ID (starts with 0)
-  thaiCorporateTaxId: () => {
-    // Corporate IDs start with 0
-    let id = '0';
-    // Next 11 digits random
-    id += utils.randomDigits(11);
-    // 13th digit is checksum
-    id += validators.calculateThaiIdChecksum(id);
-    return id;
-  },
-
-  // Generic ID card (for backward compatibility)
-  idCard: () => generators.thaiNationalId(),
-
-  passport: () => {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let passport = letters[Math.floor(Math.random() * 26)];
-    passport += letters[Math.floor(Math.random() * 26)];
-    passport += utils.randomDigits(7);
-    return passport;
-  },
-
-  // ===== Financial =====
-  creditCard: () => {
-    // Visa (4) or Mastercard (51-55)
-    const prefixes = ['4', '51', '52', '53', '54', '55'];
-    let cc = utils.randomItem(prefixes);
-    // Generate remaining digits (total should be 15 before checksum)
-    while (cc.length < 15) {
-      cc += Math.floor(Math.random() * 10);
-    }
-    // Add Luhn checksum
-    cc += validators.calculateLuhnChecksum(cc);
-    return cc;
-  },
-
-  // Formatted credit card
-  creditCardFormatted: () => {
-    const cc = generators.creditCard();
-    return `${cc.slice(0, 4)} ${cc.slice(4, 8)} ${cc.slice(8, 12)} ${cc.slice(12, 16)}`;
-  },
-
-  cvv: () => utils.randomNumber(100, 999).toString(),
-
-  expiryDate: () => {
-    const month = utils.randomNumber(1, 12).toString().padStart(2, '0');
-    const year = (new Date().getFullYear() + utils.randomNumber(1, 5)) % 100;
-    return `${month}/${year.toString().padStart(2, '0')}`;
-  },
-
-  expiryMonth: () => utils.randomNumber(1, 12).toString().padStart(2, '0'),
-  
-  expiryYear: () => (new Date().getFullYear() + utils.randomNumber(1, 5)).toString(),
-
-  price: () => {
-    if (currentLocale === 'th') {
-      return utils.randomNumber(500, 5000).toString();
-    }
-    setFakerLocale('en');
-    return faker.finance.amount();
-  },
-
-  amount: () => utils.randomNumber(1, 1000).toString(),
-
-  // ===== Account =====
-  username: () => {
-    if (currentLocale === 'th') {
-      return `user_${utils.randomId()}`;
-    }
-    setFakerLocale('en');
-    return faker.internet.userName();
-  },
-
-  password: () => {
-    if (currentLocale === 'th') {
-      return `Pass${utils.randomNumber(1000, 9999)}!`;
-    }
-    setFakerLocale('en');
-    return faker.internet.password(12, true);
-  },
-
-  // ===== Business =====
-  company: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.companies);
-    }
-    setFakerLocale('en');
-    return faker.company.companyName();
-  },
-
-  jobTitle: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.jobTitles);
-    }
-    setFakerLocale('en');
-    return faker.name.jobTitle();
-  },
-
-  // ===== Hotel/Travel =====
-  roomNumber: () => `${utils.randomNumber(1, 9)}${utils.randomNumber(0, 9).toString().padStart(2, '0')}`,
-
-  adults: () => utils.randomNumber(1, 4).toString(),
-
-  children: () => utils.randomNumber(0, 2).toString(),
-
-  nights: () => utils.randomNumber(1, 7).toString(),
-
-  // ===== Generic =====
-  number: () => utils.randomNumber(1, 100).toString(),
-
-  text: () => {
-    if (currentLocale === 'th') {
-      return utils.randomItem(thaiData.notes);
-    }
-    setFakerLocale('en');
-    return faker.lorem.sentence();
-  },
-
-  paragraph: () => {
-    if (currentLocale === 'th') {
-      return thaiData.notes.slice(0, 3).join(' ');
-    }
-    setFakerLocale('en');
-    return faker.lorem.paragraph();
-  },
-
-  url: () => {
-    if (currentLocale === 'th') {
-      return `https://www.example.co.th/${utils.randomId()}`;
-    }
-    return faker.internet.url();
-  },
-};
-
-// ===== Field Detection Rules =====
-const fieldPatterns = [
-  // Names (Specific patterns first!)
-  { patterns: ['first_name', 'firstname', 'fname', 'given_name', 'ชื่อจริง'], generator: 'firstName', label: 'First Name' },
-  { patterns: ['last_name', 'lastname', 'lname', 'surname', 'family_name', 'นามสกุล'], generator: 'lastName', label: 'Last Name' },
-  { patterns: ['full_name', 'fullname', 'name', 'guest_name', 'customer_name', 'ชื่อ'], generator: 'name', label: 'Full Name' },
-  { patterns: ['job', 'title', 'position', 'ตำแหน่ง'], generator: 'jobTitle', label: 'Job Title' },
-  
-  // Contact
-  { patterns: ['email', 'e-mail', 'อีเมล'], generator: 'email', label: 'Email' },
-  { patterns: ['phone', 'mobile', 'tel', 'telephone', 'contact_number', 'โทรศัพท์', 'เบอร์'], generator: 'phone', label: 'Phone' },
-  
-  // Address
-  { patterns: ['address', 'street', 'ที่อยู่', 'บ้านเลขที่'], generator: 'address', label: 'Address' },
-  { patterns: ['city', 'เมือง'], generator: 'city', label: 'City' },
-  { patterns: ['state', 'province', 'จังหวัด'], generator: 'state', label: 'State/Province' },
-  { patterns: ['country', 'ประเทศ'], generator: 'country', label: 'Country' },
-  { patterns: ['postal', 'postcode', 'zipcode', 'zip', 'รหัสไปรษณีย์'], generator: 'postalCode', label: 'Postal Code' },
-  
-  // Dates
-  { patterns: ['check_in', 'checkin', 'check-in', 'arrival', 'start_date', 'from_date', 'วันเข้าพัก'], generator: 'date', label: 'Check-in Date' },
-  { patterns: ['check_out', 'checkout', 'check-out', 'departure', 'end_date', 'to_date', 'วันออก'], generator: 'date', label: 'Check-out Date' },
-  { patterns: ['birth', 'dob', 'birthday', 'date_of_birth', 'วันเกิด'], generator: 'birthDate', label: 'Birth Date' },
-  { patterns: ['date'], generator: 'date', label: 'Date' },
-  
-  // Identity Documents (with validation!)
-  { patterns: ['id_card', 'idcard', 'citizen_id', 'national_id', 'thai_id', 'บัตรประชาชน', 'เลขบัตร'], generator: 'thaiNationalId', label: 'Thai National ID' },
-  { patterns: ['tax_id', 'taxid', 'tin', 'tax_number', 'เลขประจำตัวผู้เสียภาษี'], generator: 'thaiNationalId', label: 'Tax ID (Individual)' },
-  { patterns: ['corporate_tax', 'company_tax', 'corporate_id', 'juristic_id', 'องค์กร', 'นิติบุคคล'], generator: 'thaiCorporateTaxId', label: 'Tax ID (Corporate)' },
-  { patterns: ['passport', 'passport_no', 'passport_number'], generator: 'passport', label: 'Passport' },
-  
-  // Financial
-  { patterns: ['credit_card', 'card_number', 'cc_number', 'creditcard', 'บัตรเครดิต'], generator: 'creditCard', label: 'Credit Card' },
-  { patterns: ['cvv', 'cvc', 'security_code', 'card_code'], generator: 'cvv', label: 'CVV' },
-  { patterns: ['expiry', 'exp_date', 'card_expiry', 'วันหมดอายุ'], generator: 'expiryDate', label: 'Expiry Date' },
-  { patterns: ['exp_month', 'expiry_month', 'card_month'], generator: 'expiryMonth', label: 'Expiry Month' },
-  { patterns: ['exp_year', 'expiry_year', 'card_year'], generator: 'expiryYear', label: 'Expiry Year' },
-  { patterns: ['price', 'amount', 'total', 'cost', 'ราคา', 'จำนวนเงิน'], generator: 'price', label: 'Price' },
-  
-  // Hotel specific
-  { patterns: ['room_number', 'room_no', 'room', 'ห้อง'], generator: 'roomNumber', label: 'Room Number' },
-  { patterns: ['adult', 'adults', 'ผู้ใหญ่'], generator: 'adults', label: 'Adults' },
-  { patterns: ['child', 'children', 'kids', 'เด็ก'], generator: 'children', label: 'Children' },
-  { patterns: ['night', 'nights', 'คืน'], generator: 'nights', label: 'Nights' },
-  
-  // Account
-  { patterns: ['username', 'user_name', 'login'], generator: 'username', label: 'Username' },
-  { patterns: ['password', 'passwd', 'pwd', 'รหัสผ่าน'], generator: 'password', label: 'Password' },
-  
-  // Business
-  { patterns: ['company', 'organization', 'org', 'บริษัท', 'หน่วยงาน'], generator: 'company', label: 'Company' },
-  { patterns: ['quantity', 'qty', 'count', 'จำนวน'], generator: 'number', label: 'Quantity' },
-  
-  // Other
-  { patterns: ['url', 'website', 'link'], generator: 'url', label: 'URL' },
-  { patterns: ['note', 'notes', 'comment', 'remark', 'description', 'หมายเหตุ', 'รายละเอียด'], generator: 'text', label: 'Notes' },
-];
-
-// Generator type options for override dropdown
-const generatorOptions = [
-  { value: 'auto', label: 'Auto-detect' },
-  { value: 'name', label: 'Full Name' },
-  { value: 'firstName', label: 'First Name' },
-  { value: 'lastName', label: 'Last Name' },
-  { value: 'jobTitle', label: 'Job Title' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'address', label: 'Address' },
-  { value: 'postalCode', label: 'Postal Code' },
-  { value: 'date', label: 'Date (Future)' },
-  { value: 'pastDate', label: 'Date (Past)' },
-  { value: 'birthDate', label: 'Birth Date' },
-  { value: 'thaiNationalId', label: 'Thai National ID ✓' },
-  { value: 'thaiCorporateTaxId', label: 'Corporate Tax ID ✓' },
-  { value: 'passport', label: 'Passport' },
-  { value: 'creditCard', label: 'Credit Card ✓' },
-  { value: 'cvv', label: 'CVV' },
-  { value: 'expiryDate', label: 'Expiry Date' },
-  { value: 'username', label: 'Username' },
-  { value: 'password', label: 'Password' },
-  { value: 'company', label: 'Company' },
-  { value: 'number', label: 'Number' },
-  { value: 'text', label: 'Sentence' },
-  { value: 'paragraph', label: 'Paragraph' },
-  { value: 'url', label: 'URL' },
-];
+// ===== Linked Fields Context =====
+// Stores generated values for primary fields to reuse in linked fields
+let linkedContext = {};
 
 // ===== Main Logic =====
 let detectedFields = [];
 
 async function scanPage() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  
-  const results = await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: () => {
-      const fields = [];
-      const inputs = document.querySelectorAll('input, textarea, select');
-      
-      inputs.forEach((el, index) => {
-        // Skip hidden, submit, button, file, image, reset, checkbox, radio
-        const skipTypes = ['hidden', 'submit', 'button', 'file', 'image', 'reset', 'checkbox', 'radio'];
-        if (skipTypes.includes(el.type)) return;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const fields = [];
+        const inputs = document.querySelectorAll('input, textarea, select');
         
-        // Skip if not visible
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) return;
-        
-        // Get label text
-        let labelText = '';
-        if (el.id) {
-          const label = document.querySelector(`label[for="${el.id}"]`);
-          if (label) labelText = label.textContent.trim();
-        }
-        if (!labelText) {
-          const parentLabel = el.closest('label');
-          if (parentLabel) labelText = parentLabel.textContent.trim();
-        }
-        if (!labelText && el.getAttribute('aria-label')) {
-          labelText = el.getAttribute('aria-label');
-        }
-        
-        fields.push({
-          index,
-          tagName: el.tagName.toLowerCase(),
-          type: el.type || 'text',
-          name: el.name || '',
-          id: el.id || '',
-          placeholder: el.placeholder || '',
-          labelText,
-          isSelect: el.tagName.toLowerCase() === 'select',
-          options: el.tagName.toLowerCase() === 'select' 
-            ? Array.from(el.options).map(o => ({ value: o.value, text: o.text }))
-            : []
+        inputs.forEach((el, index) => {
+          // Skip hidden, submit, button, file, image, reset, checkbox, radio
+          const skipTypes = ['hidden', 'submit', 'button', 'file', 'image', 'reset', 'checkbox', 'radio'];
+          if (skipTypes.includes(el.type)) return;
+          
+          // Skip if not visible
+          const rect = el.getBoundingClientRect();
+          if (rect.width === 0 && rect.height === 0) return;
+          
+          // Get label text
+          let labelText = '';
+          if (el.id) {
+            const label = document.querySelector(`label[for="${el.id}"]`);
+            if (label) labelText = label.textContent.trim();
+          }
+          if (!labelText) {
+            const parentLabel = el.closest('label');
+            if (parentLabel) labelText = parentLabel.textContent.trim();
+          }
+          if (!labelText && el.getAttribute('aria-label')) {
+            labelText = el.getAttribute('aria-label');
+          }
+          
+          fields.push({
+            index,
+            tagName: el.tagName.toLowerCase(),
+            type: el.type || 'text',
+            name: el.name || '',
+            id: el.id || '',
+            placeholder: el.placeholder || '',
+            labelText,
+            isSelect: el.tagName.toLowerCase() === 'select',
+            options: el.tagName.toLowerCase() === 'select' 
+              ? Array.from(el.options).map(o => ({ value: o.value, text: o.text }))
+              : []
+          });
         });
-      });
-      
-      return fields;
+        
+        return fields;
+      }
+    });
+    
+    return (results && results[0] && results[0].result) ? results[0].result : [];
+  } catch (err) {
+    console.error('Scan error:', err);
+    // Handle restricted pages (chrome://, edge://, etc.)
+    if (err.message && (err.message.includes('Cannot access') || err.message.includes('cannot be scripted'))) {
+      throw new Error('Cannot scan this page (restricted)');
     }
-  });
-  
-  return (results && results[0] && results[0].result) ? results[0].result : [];
+    throw err;
+  }
 }
 
 function detectFieldType(searchText, inputType) {
@@ -521,12 +90,16 @@ function detectFieldType(searchText, inputType) {
   if (inputType === 'number') return { generator: 'number', label: 'Number' };
   if (inputType === 'password') return { generator: 'password', label: 'Password' };
   
-  // Check patterns
+  // Check patterns from fieldPatterns.js
   const lowerSearch = searchText.toLowerCase();
-  for (const rule of fieldPatterns) {
+  for (const rule of window.fieldPatterns) {
     for (const pattern of rule.patterns) {
       if (lowerSearch.includes(pattern)) {
-        return { generator: rule.generator, label: rule.label };
+        return { 
+          generator: rule.generator, 
+          label: rule.label,
+          linkedTo: rule.linkedTo || null
+        };
       }
     }
   }
@@ -535,13 +108,16 @@ function detectFieldType(searchText, inputType) {
 }
 
 function generateValues(fields) {
+  // Reset linked context for fresh generation
+  linkedContext = {};
+  
   return fields.map(field => {
     const searchText = `${field.name} ${field.id} ${field.placeholder} ${field.labelText}`;
     
     // Use override if set, otherwise auto-detect
     let detectedType;
     if (field.generatorOverride && field.generatorOverride !== 'auto') {
-      const option = generatorOptions.find(o => o.value === field.generatorOverride);
+      const option = window.generatorOptions.find(o => o.value === field.generatorOverride);
       detectedType = { generator: field.generatorOverride, label: option?.label || field.generatorOverride };
     } else {
       detectedType = detectFieldType(searchText, field.type);
@@ -553,15 +129,28 @@ function generateValues(fields) {
       // Random select option (skip first if it's empty/placeholder)
       const validOptions = field.options.filter(o => o.value !== '');
       if (validOptions.length > 0) {
-        value = utils.randomItem(validOptions).value;
+        value = window.utils.randomItem(validOptions).value;
       } else {
         value = field.options[0].value;
       }
       detectedType.label = 'Select Option';
     } else {
-      const generatorFn = generators[detectedType.generator] || generators.text;
-      value = generatorFn();
+      // Check if this is a linked field (e.g., confirm_email should use same as email)
+      if (detectedType.linkedTo && linkedContext[detectedType.linkedTo]) {
+        value = linkedContext[detectedType.linkedTo];
+      } else {
+        const generatorFn = window.generators[detectedType.generator] || window.generators.text;
+        value = generatorFn();
+        
+        // Store in linked context for related fields
+        if (['email', 'password'].includes(detectedType.generator) && !detectedType.linkedTo) {
+          linkedContext[detectedType.generator] = value;
+        }
+      }
     }
+    
+    // Determine group
+    const group = window.getGroupForGenerator(detectedType.generator);
     
     return {
       ...field,
@@ -569,43 +158,66 @@ function generateValues(fields) {
       generatorType: detectedType.generator,
       generatedValue: value,
       enabled: field.enabled !== undefined ? field.enabled : true,
-      generatorOverride: field.generatorOverride || 'auto'
+      generatorOverride: field.generatorOverride || 'auto',
+      linkedTo: detectedType.linkedTo || null,
+      group
     };
   });
 }
 
 async function fillForm(fields) {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  
-  const enabledFields = fields.filter(f => f.enabled);
-  
-  await chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: (fieldsToFill) => {
-      const inputs = document.querySelectorAll('input, textarea, select');
-      
-      fieldsToFill.forEach(field => {
-        const el = inputs[field.index];
-        if (!el) return;
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    const enabledFields = fields.filter(f => f.enabled);
+    
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (fieldsToFill) => {
+        const inputs = document.querySelectorAll('input, textarea, select');
         
-        // Set value
-        el.value = field.generatedValue;
-        
-        // Trigger events for frameworks
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-        el.dispatchEvent(new Event('blur', { bubbles: true }));
-        
-        // For React
-        const nativeValueSetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
-        if (nativeValueSetter) {
-          nativeValueSetter.call(el, field.generatedValue);
+        fieldsToFill.forEach(field => {
+          const el = inputs[field.index];
+          if (!el) return;
+          
+          // Set value
+          el.value = field.generatedValue;
+          
+          // Trigger events for frameworks
           el.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      });
-    },
-    args: [enabledFields]
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          el.dispatchEvent(new Event('blur', { bubbles: true }));
+          
+          // For React controlled inputs
+          const nativeValueSetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
+          if (nativeValueSetter) {
+            nativeValueSetter.call(el, field.generatedValue);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        });
+      },
+      args: [enabledFields]
+    });
+    
+    return enabledFields.length;
+  } catch (err) {
+    console.error('Fill error:', err);
+    throw new Error('Cannot fill form on this page');
+  }
+}
+
+function groupFieldsByCategory(fields) {
+  const groups = {};
+  
+  fields.forEach((field, idx) => {
+    const groupKey = field.group || 'other';
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
+    }
+    groups[groupKey].push({ ...field, originalIndex: idx });
   });
+  
+  return groups;
 }
 
 function renderFields(fields) {
@@ -613,34 +225,66 @@ function renderFields(fields) {
   if (!fieldsList) return;
   fieldsList.innerHTML = '';
   
-  fields.forEach((field, idx) => {
-    const displayName = field.name || field.id || field.placeholder || `Field ${idx + 1}`;
+  // Group fields by category
+  const groupedFields = groupFieldsByCategory(fields);
+  
+  // Define group order
+  const groupOrder = ['personal', 'contact', 'address', 'payment', 'booking', 'account', 'business', 'other'];
+  
+  let animationIndex = 0;
+  
+  groupOrder.forEach(groupKey => {
+    if (!groupedFields[groupKey] || groupedFields[groupKey].length === 0) return;
     
-    // Build options for dropdown
-    const optionsHtml = generatorOptions.map(opt => 
-      `<option value="${opt.value}" ${field.generatorOverride === opt.value ? 'selected' : ''}>${opt.label}</option>`
-    ).join('');
+    const groupInfo = window.fieldGroups[groupKey];
+    const groupFields = groupedFields[groupKey];
     
-    const div = document.createElement('div');
-    div.className = 'field-item';
-    // Add staggered animation delay
-    div.style.animationDelay = `${idx * 0.05}s`;
-    
-    div.innerHTML = `
-      <input type="checkbox" class="field-checkbox" data-idx="${idx}" ${field.enabled ? 'checked' : ''}>
-      <div class="field-info">
-        <div class="field-name">
-          ${displayName}
-          <span class="field-type">${field.detectedType}</span>
-        </div>
-        <div class="field-value" data-idx="${idx}" title="Click to copy">${field.generatedValue}</div>
-        <select class="field-type-select" data-idx="${idx}">
-          ${optionsHtml}
-        </select>
-      </div>
+    // Create group header
+    const groupHeader = document.createElement('div');
+    groupHeader.className = 'field-group-header';
+    groupHeader.innerHTML = `
+      <span class="group-icon">${groupInfo.icon}</span>
+      <span class="group-label">${groupInfo.label}</span>
+      <span class="group-count">${groupFields.length}</span>
     `;
+    fieldsList.appendChild(groupHeader);
     
-    fieldsList.appendChild(div);
+    // Render fields in this group
+    groupFields.forEach(field => {
+      const idx = field.originalIndex;
+      const displayName = field.name || field.id || field.placeholder || `Field ${idx + 1}`;
+      
+      // Build options for dropdown
+      const optionsHtml = window.generatorOptions.map(opt => 
+        `<option value="${opt.value}" ${field.generatorOverride === opt.value ? 'selected' : ''}>${opt.label}</option>`
+      ).join('');
+      
+      const div = document.createElement('div');
+      div.className = 'field-item';
+      div.style.animationDelay = `${animationIndex * 0.03}s`;
+      
+      // Add linked indicator
+      const linkedIndicator = field.linkedTo ? 
+        `<span class="linked-badge" title="Linked to ${field.linkedTo}">🔗</span>` : '';
+      
+      div.innerHTML = `
+        <input type="checkbox" class="field-checkbox" data-idx="${idx}" ${field.enabled ? 'checked' : ''}>
+        <div class="field-info">
+          <div class="field-name">
+            ${displayName}
+            <span class="field-type">${field.detectedType}</span>
+            ${linkedIndicator}
+          </div>
+          <div class="field-value" data-idx="${idx}" title="Click to copy">${field.generatedValue}</div>
+          <select class="field-type-select" data-idx="${idx}">
+            ${optionsHtml}
+          </select>
+        </div>
+      `;
+      
+      fieldsList.appendChild(div);
+      animationIndex++;
+    });
   });
   
   // Add checkbox listeners
@@ -652,43 +296,46 @@ function renderFields(fields) {
     });
   });
   
-  // Add type override listeners
+  // Add type override listeners with debounce
+  const debouncedTypeChange = debounce((idx, newType) => {
+    // Update the field override
+    detectedFields[idx].generatorOverride = newType;
+    
+    // Partial refresh: Only regenerate this specific field
+    const field = detectedFields[idx];
+    const searchText = `${field.name} ${field.id} ${field.placeholder} ${field.labelText}`;
+    
+    let detectedType;
+    if (newType !== 'auto') {
+      const option = window.generatorOptions.find(o => o.value === newType);
+      detectedType = { generator: newType, label: option?.label || newType };
+    } else {
+      detectedType = detectFieldType(searchText, field.type);
+    }
+    
+    // Update internal state for this field
+    const generatorFn = window.generators[detectedType.generator] || window.generators.text;
+    detectedFields[idx].generatedValue = generatorFn();
+    detectedFields[idx].detectedType = detectedType.label;
+    detectedFields[idx].generatorType = detectedType.generator;
+    detectedFields[idx].group = window.getGroupForGenerator(detectedType.generator);
+    
+    // Re-render to show new value
+    renderFields(detectedFields);
+    showToast(`Updated ${detectedType.label}`, '🔄');
+  }, 150);
+  
   fieldsList.querySelectorAll('.field-type-select').forEach(select => {
     select.addEventListener('change', (e) => {
       const idx = parseInt(e.target.dataset.idx);
       const newType = e.target.value;
-      
-      // Update the field override
-      detectedFields[idx].generatorOverride = newType;
-      
-      // Partial refresh: Only regenerate this specific field
-      const field = detectedFields[idx];
-      const searchText = `${field.name} ${field.id} ${field.placeholder} ${field.labelText}`;
-      
-      let detectedType;
-      if (newType !== 'auto') {
-        const option = generatorOptions.find(o => o.value === newType);
-        detectedType = { generator: newType, label: option?.label || newType };
-      } else {
-        detectedType = detectFieldType(searchText, field.type);
-      }
-      
-      // Update internal state for this field
-      const generatorFn = generators[detectedType.generator] || generators.text;
-      detectedFields[idx].generatedValue = generatorFn();
-      detectedFields[idx].detectedType = detectedType.label;
-      detectedFields[idx].generatorType = detectedType.generator;
-      
-      // Re-render to show new value
-      renderFields(detectedFields);
-      showToast(`Updated ${detectedType.label}`, '🔄');
+      debouncedTypeChange(idx, newType);
     });
   });
 
   // Add click-to-copy listeners for field value
   fieldsList.querySelectorAll('.field-value').forEach(div => {
     div.addEventListener('click', async (e) => {
-      // CAPTURE target elements before any awaits to avoid null references in Chrome
       const el = e.currentTarget;
       const idx = parseInt(el.dataset.idx);
       const value = detectedFields[idx].generatedValue;
@@ -699,7 +346,7 @@ function renderFields(fields) {
         
         // Visual feedback
         const originalColor = el.style.color;
-        el.style.color = '#10b981'; // Green feedback
+        el.style.color = '#10b981';
         setTimeout(() => {
           if (el) el.style.color = originalColor;
         }, 800);
@@ -723,7 +370,7 @@ function updateLocaleUI() {
   document.querySelectorAll('.locale-btn').forEach(btn => {
     btn.classList.remove('active');
   });
-  document.getElementById(`locale${currentLocale.toUpperCase()}`).classList.add('active');
+  document.getElementById(`locale${window.currentLocale.toUpperCase()}`).classList.add('active');
 }
 
 function showToast(message, icon = '✨') {
@@ -773,13 +420,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (emptyState) {
       emptyState.style.display = 'block';
       const p = emptyState.querySelector('p');
-      if (p) p.textContent = 'Error: ' + err.message;
+      if (p) p.textContent = err.message || 'Error scanning page';
     }
   }
   
   // Locale toggle handlers
   document.getElementById('localeEN').addEventListener('click', () => {
-    currentLocale = 'en';
+    window.setCurrentLocale('en');
+    window.setFakerLocale('en');
     updateLocaleUI();
     detectedFields = generateValues(detectedFields);
     renderFields(detectedFields);
@@ -787,8 +435,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   
   document.getElementById('localeTH').addEventListener('click', () => {
-    currentLocale = 'th';
-    setFakerLocale('th'); // Force immediate locale change
+    window.setCurrentLocale('th');
+    window.setFakerLocale('th');
     updateLocaleUI();
     detectedFields = generateValues(detectedFields);
     renderFields(detectedFields);
@@ -813,8 +461,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Fill button
   document.getElementById('fillBtn').addEventListener('click', async () => {
-    await fillForm(detectedFields);
-    const filledCount = detectedFields.filter(f => f.enabled).length;
-    showToast(`${filledCount} fields filled!`, '✨');
+    try {
+      const filledCount = await fillForm(detectedFields);
+      showToast(`${filledCount} fields filled!`, '✨');
+    } catch (err) {
+      showToast(err.message, '⚠️');
+    }
   });
 });

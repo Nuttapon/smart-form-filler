@@ -200,14 +200,41 @@
       border-radius: 10px;
     }
 
+    .field-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: rgba(197, 160, 89, 0.08);
+      border-bottom: 1px solid rgba(210, 180, 140, 0.1);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent-gold);
+    }
+
+    .group-icon {
+      font-size: 14px;
+    }
+
+    .group-label {
+      flex: 1;
+    }
+
+    .group-count {
+      background: rgba(197, 160, 89, 0.15);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+    }
+
     .field-item {
       display: flex;
       align-items: flex-start;
-      padding: 16px 20px;
+      padding: 14px 20px 14px 32px;
       border-bottom: 1px solid rgba(210, 180, 140, 0.05);
       gap: 14px;
       transition: all 0.2s ease;
-      animation: fadeIn 0.4s ease-out backwards;
+      animation: fadeIn 0.3s ease-out backwards;
     }
 
     @keyframes fadeIn {
@@ -276,6 +303,12 @@
       border-radius: 20px;
       font-weight: 600;
       border: 1px solid rgba(197, 160, 89, 0.1);
+    }
+
+    .linked-badge {
+      font-size: 10px;
+      opacity: 0.7;
+      cursor: help;
     }
 
     .field-value {
@@ -505,7 +538,11 @@
     <span id="toastMessage">Success!</span>
   </div>
 
+  <!-- Load modules in correct order -->
   <script src="libs/faker.min.js"></script>
+  <script src="validators.js"></script>
+  <script src="fieldPatterns.js"></script>
+  <script src="generators.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
