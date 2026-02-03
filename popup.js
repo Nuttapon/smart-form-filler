@@ -334,11 +334,9 @@ async function fillForm(fields) {
         el.dispatchEvent(new Event('blur', { bubbles: true }));
         
         // For React
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          window.HTMLInputElement.prototype, 'value'
-        )?.set;
-        if (nativeInputValueSetter) {
-          nativeInputValueSetter.call(el, field.generatedValue);
+        const nativeValueSetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set;
+        if (nativeValueSetter) {
+          nativeValueSetter.call(el, field.generatedValue);
           el.dispatchEvent(new Event('input', { bubbles: true }));
         }
       });
