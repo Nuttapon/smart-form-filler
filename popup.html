@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Form Filler</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 380px;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-icon {
+      font-size: 24px;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .header p {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 16px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .status-icon {
+      font-size: 18px;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .status-count {
+      font-weight: 600;
+      color: #6366f1;
+    }
+
+    .fields-container {
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .field-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      gap: 10px;
+    }
+
+    .field-item:last-child {
+      border-bottom: none;
+    }
+
+    .field-item:hover {
+      background: #f8fafc;
+    }
+
+    .field-checkbox {
+      width: 16px;
+      height: 16px;
+      accent-color: #6366f1;
+      cursor: pointer;
+    }
+
+    .field-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .field-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field-type {
+      font-size: 9px;
+      background: #e2e8f0;
+      color: #64748b;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .field-value {
+      font-size: 11px;
+      color: #6366f1;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #94a3b8;
+    }
+
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+    }
+
+    .select-all {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f1f5f9;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      background: #10b981;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-icon">🔧</span>
+    <div>
+      <h1>Smart Form Filler</h1>
+      <p>Auto-detect & fill form fields</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="main" style="display: none;">
+      <div class="status">
+        <span class="status-icon">📋</span>
+        <span class="status-text">พบ <span id="fieldCount" class="status-count">0</span> fields</span>
+      </div>
+
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-state-icon">🔍</div>
+        <p>ไม่พบ form fields ในหน้านี้</p>
+      </div>
+
+      <div id="fieldsWrapper" class="fields-container" style="display: none;">
+        <div class="select-all">
+          <input type="checkbox" id="selectAll" class="field-checkbox" checked>
+          <label for="selectAll">เลือกทั้งหมด</label>
+        </div>
+        <div id="fieldsList"></div>
+      </div>
+
+      <div id="buttonsWrapper" class="buttons" style="display: none;">
+        <button id="randomBtn" class="btn btn-secondary">
+          🎲 Random ใหม่
+        </button>
+        <button id="fillBtn" class="btn btn-primary">
+          ✅ Fill Form
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">
+    <span>✓</span>
+    <span id="toastMessage">Filled successfully!</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
